@@ -9,7 +9,7 @@ dataSources:
     network: localhost
     source:
       abi: YourContract
-      address: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+      address: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -23,4 +23,32 @@ dataSources:
       eventHandlers:
         - event: GreetingChange(indexed address,string,bool,uint256)
           handler: handleGreetingChange
+      file: ./src/mapping.ts
+  - kind: ethereum/contract
+    name: SharedRealityExchange
+    network: localhost
+    source:
+      abi: SharedRealityExchange
+      address: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.6
+      language: wasm/assemblyscript
+      entities:
+        - Campaign
+        - Donation
+        - Withdrawal
+        - OwnershipTransferred
+      abis:
+        - name: SharedRealityExchange
+          file: ./abis/localhost_SharedRealityExchange.json
+      eventHandlers:
+        - event: CampaignCreated(uint32,address,string,string,string)
+          handler: handleCampaignCreated
+        - event: Donation(uint32,address,uint256)
+          handler: handleDonation
+        - event: Withdrawal(uint32,address,uint256)
+          handler: handleWithdrawal
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
       file: ./src/mapping.ts

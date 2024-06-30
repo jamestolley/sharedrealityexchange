@@ -15,3 +15,46 @@ type Sender @entity {
   createdAt: BigInt!
   greetingCount: BigInt!
 }
+
+type Campaign @entity {
+  id: ID!
+  campaignId: BigInt! # uint32
+  owner: Bytes! # address
+  title: String! # string
+  claim: String! # string
+  description: String! # string
+  amountCollected: BigInt! # uint256
+  amountWithdrawn: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Donation @entity {
+  id: ID!
+  campaignId: BigInt! # uint32
+  donor: Bytes! # address
+  amount: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Withdrawal @entity(immutable: true) {
+  id: ID!
+  campaignId: BigInt! # uint32
+  owner: Bytes! # address
+  amount: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type OwnershipTransferred @entity(immutable: true) {
+  id: ID!
+  previousOwner: Bytes! # address
+  newOwner: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}

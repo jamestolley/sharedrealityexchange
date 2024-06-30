@@ -1,0 +1,33 @@
+networkConfig:
+  entityIdPrefixes:
+    - networks:
+        - mainnet
+      prefix: ""
+    - networks:
+        - hardhat
+      prefix: local-
+entitySettings:
+  Campaign:
+    useDefault: []
+    setters: []
+    entityId:
+      - name: id
+        type: Bytes
+  Donation:
+    useDefault: []
+    setters: []
+    entityId:
+      - name: id
+        type: Bytes
+  Withdrawal:
+    useDefault: []
+    setters: []
+    entityId:
+      - name: id
+        type: Bytes
+  OwnershipTransferred:
+    useDefault: []
+    setters: []
+    entityId:
+      - name: id
+        type: Bytes

@@ -35,10 +35,25 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   // Get the deployed contract to interact with it after deploying.
   const yourContract = await hre.ethers.getContract<Contract>("YourContract", deployer);
   console.log("👋 Initial greeting:", await yourContract.greeting());
+
+  await deploy("SharedRealityExchange", {
+    from: deployer,
+    // Contract constructor arguments
+    args: [],
+    log: true,
+    // autoMine: can be passed to the deploy function to make the deployment process faster on local networks by
+    // automatically mining the contract deployment transaction. There is no effect on live networks.
+    autoMine: true,
+  });
+
+  // Get the deployed contract to interact with it after deploying.
+  const sharedRealityExchange = await hre.ethers.getContract<Contract>("SharedRealityExchange", deployer);
+  console.log("👋 Initial owner:", await sharedRealityExchange.owner());
+  console.log("👋 Initial address:", await sharedRealityExchange.getAddress());
 };
 
 export default deployYourContract;
 
 // Tags are useful if you have multiple deploy files and only want to run one of them.
 // e.g. yarn deploy --tags YourContract
-deployYourContract.tags = ["YourContract"];
+deployYourContract.tags = ["YourContract", "SharedRealityExchange"];
