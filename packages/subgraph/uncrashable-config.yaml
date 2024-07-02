@@ -9,7 +9,19 @@ networkConfig:
 entitySettings:
   Campaign:
     useDefault: []
-    setters: []
+    setters:
+      - name: updateCampaignOwner
+        fields:
+          - owner
+      - name: updateCampaignTitle
+        fields:
+          - title
+      - name: updateCampaignClaim
+        fields:
+          - claim
+      - name: updateCampaignDescription
+        fields:
+          - description
     entityId:
       - name: id
         type: Bytes

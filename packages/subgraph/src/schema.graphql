@@ -43,7 +43,7 @@ type Donation @entity {
 type Withdrawal @entity(immutable: true) {
   id: ID!
   campaignId: BigInt! # uint32
-  owner: Bytes! # address
+  withdrawer: Bytes! # address
   amount: BigInt! # uint256
   blockNumber: BigInt!
   blockTimestamp: BigInt!

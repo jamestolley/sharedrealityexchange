@@ -40,25 +40,25 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 	);
 
 	event CampaignOwnerUpdated(
-		uint32 campaign_id,
+		uint32 campaignId,
 		address oldOwner,
 		address newOwner
 	);
 
 	event CampaignTitleUpdated(
-		uint32 campaign_id,
+		uint32 campaignId,
 		string oldTitle,
 		string newTitle
 	);
 
 	event CampaignClaimUpdated(
-		uint32 campaign_id,
+		uint32 campaignId,
 		string oldClaim,
 		string newClaim
 	);
 
 	event CampaignDescriptionUpdated(
-		uint32 campaign_id,
+		uint32 campaignId,
 		string newDescription
 	);
 
@@ -70,23 +70,10 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 	
 	event Withdrawal(
 		uint32 campaignId,
-		address owner,
+		address withdrawer,
 		uint256 amount
 	);
 
-	// Events: a way to emit log statements from smart contract that can be listened to by external parties
-	// event GreetingChange(
-	// 	address indexed greetingSetter,
-	// 	string newGreeting,
-	// 	bool premium,
-	// 	uint256 value
-	// );
-
-	// Constructor: Called once on contract deployment
-	// Check packages/hardhat/deploy/00_deploy_your_contract.ts
-	// constructor(address _owner) {
-	// 	owner = _owner;
-	// }
 	constructor() Ownable() {}
 
 	function createCampaign(
@@ -184,12 +171,6 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 	function campaignCount() public view returns (uint256 count) {
 		count = campaigns.length;
 	}
-
-	// function campaign(uint256 _campaignId) public view returns (Campaign memory) {
-	// 	require(campaigns.length >= _campaignId + 1, "No such campaign");
-
-	// 	return campaigns[_campaignId];
-	// }
 
 	function donateToCampaign(uint32 _campaignId) public payable {
 		require(campaigns.length >= _campaignId + 1, "No such campaign");

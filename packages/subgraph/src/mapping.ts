@@ -8,7 +8,11 @@ import {
   CampaignCreated as CampaignCreatedEvent,
   Donation as DonationEvent,
   Withdrawal as WithdrawalEvent,
-  OwnershipTransferred as OwnershipTransferredEvent
+  OwnershipTransferred as OwnershipTransferredEvent,
+  CampaignOwnerUpdated as CampaignOwnerUpdatedEvent,
+  CampaignTitleUpdated as CampaignTitleUpdatedEvent,
+  CampaignClaimUpdated as CampaignClaimUpdatedEvent,
+  CampaignDescriptionUpdated as CampaignDescriptionUpdatedEvent
 } from "../generated/SharedRealityExchange/SharedRealityExchange";
 import { Greeting, Sender, Campaign, Donation, Withdrawal, OwnershipTransferred } from "../generated/schema";
 import {
@@ -20,8 +24,13 @@ import {
   generateWithdrawalId,
   createWithdrawal,
   generateOwnershipTransferredId,
-  createOwnershipTransferred
-} from "../generated/UncrashableEntityHelpers"
+  createOwnershipTransferred,
+  updateCampaignOwner,
+  updateCampaignTitle,
+  updateCampaignClaim,
+  updateCampaignDescription
+// } from "../generated/UncrashableEntityHelpers"
+} from "../generated/UncrashableEntityHelpers.edited"
 // import { tokenToString } from "typescript";
 
 export function handleGreetingChange(event: GreetingChange): void {
@@ -72,7 +81,7 @@ export function handleCampaignCreated(event: CampaignCreatedEvent): void {
   });
 }
 
-export function handleDonation(event: DonationEvent): void {
+export function handleDonation(event: DonationEvent, id?: string): void {
 
   let campaignId = createCampaignId(event.params.campaignId);
 
@@ -84,7 +93,7 @@ export function handleDonation(event: DonationEvent): void {
     campaign.save();
   }
 
-  let donationId = generateDonationId(
+  let donationId = id ? generateDonationId(Bytes.fromHexString(id)) : generateDonationId(
     event.transaction.hash.concatI32(
       event.logIndex.toI32()
     )
@@ -101,7 +110,7 @@ export function handleDonation(event: DonationEvent): void {
   });
 }
 
-export function handleWithdrawal(event: WithdrawalEvent): void {
+export function handleWithdrawal(event: WithdrawalEvent, id?: string): void {
 
   let campaignId = createCampaignId(event.params.campaignId);
 
@@ -113,7 +122,7 @@ export function handleWithdrawal(event: WithdrawalEvent): void {
     campaign.save();
   }
 
-  let withdrawalId = generateWithdrawalId(
+  let withdrawalId = id ? generateWithdrawalId(Bytes.fromHexString(id)) : generateWithdrawalId(
     event.transaction.hash.concatI32(
       event.logIndex.toI32()
     )
@@ -122,7 +131,7 @@ export function handleWithdrawal(event: WithdrawalEvent): void {
   createWithdrawal(
     withdrawalId, {
     campaignId: event.params.campaignId,
-    owner: Bytes.fromHexString(event.params.owner.toHexString()),
+    withdrawer: Bytes.fromHexString(event.params.withdrawer.toHexString()),
     amount: event.params.amount,
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,
@@ -130,9 +139,9 @@ export function handleWithdrawal(event: WithdrawalEvent): void {
   });
 }
 
-export function handleOwnershipTransferred(event: OwnershipTransferredEvent): void {
+export function handleOwnershipTransferred(event: OwnershipTransferredEvent, id?: string): void {
 
-  let transferId = generateOwnershipTransferredId(
+  let transferId = id ? generateOwnershipTransferredId(Bytes.fromHexString(id)) : generateOwnershipTransferredId(
     event.transaction.hash.concatI32(
       event.logIndex.toI32()
     )
@@ -148,12 +157,37 @@ export function handleOwnershipTransferred(event: OwnershipTransferredEvent): vo
     }
   );
 }
+
+export function handleUpdateCampaignOwner(event: CampaignOwnerUpdatedEvent): void {
+  updateCampaignOwner(createCampaignId(event.params.campaignId), {
+    owner: event.params.newOwner
+  });
+}
+
+export function handleUpdateCampaignTitle(event: CampaignTitleUpdatedEvent): void {
+  updateCampaignTitle(createCampaignId(event.params.campaignId), {
+    title: event.params.newTitle
+  });
+}
+
+export function handleUpdateCampaignClaim(event: CampaignClaimUpdatedEvent): void {
+  updateCampaignClaim(createCampaignId(event.params.campaignId), {
+    claim: event.params.newClaim
+  });
+}
+
+export function handleUpdateCampaignDescription(event: CampaignDescriptionUpdatedEvent): void {
+  updateCampaignDescription(createCampaignId(event.params.campaignId), {
+    description: event.params.newDescription
+  });
+}
+
 /**
- * 
+ * Takes a BigInt and returns a hex string in the form e.g. "0x0001"
  * @param BigInt campaignId 
  * @returns string
  */
-function createCampaignId(campaignId: BigInt): string {
+export function createCampaignId(campaignId: BigInt): string {
   // let hex = campaignId.toHexString();
   // if (hex.length % 2) {
   //   hex = '0' + hex;
