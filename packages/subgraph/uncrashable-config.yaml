@@ -37,9 +37,9 @@ entitySettings:
     entityId:
       - name: id
         type: Bytes
-  OwnershipTransferred:
-    useDefault: []
-    setters: []
-    entityId:
-      - name: id
-        type: Bytes
+#   OwnershipTransferred:
+#     useDefault: []
+#     setters: []
+#     entityId:
+#       - name: id
+#         type: Bytes

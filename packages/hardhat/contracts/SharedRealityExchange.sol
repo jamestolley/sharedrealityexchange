@@ -41,25 +41,22 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 
 	event CampaignOwnerUpdated(
 		uint32 campaignId,
-		address oldOwner,
-		address newOwner
+		address owner
 	);
 
 	event CampaignTitleUpdated(
 		uint32 campaignId,
-		string oldTitle,
-		string newTitle
+		string title
 	);
 
 	event CampaignClaimUpdated(
 		uint32 campaignId,
-		string oldClaim,
-		string newClaim
+		string claim
 	);
 
 	event CampaignDescriptionUpdated(
 		uint32 campaignId,
-		string newDescription
+		string description
 	);
 
 	event Donation(
@@ -80,7 +77,7 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		string calldata _title,
 		string calldata _claim,
 		string calldata _description
-	) external returns (uint256) {
+	) external returns (uint32) {
 
 		bytes32 baseCompare = keccak256("");
 		bytes32 titleCompare = keccak256(bytes(_title));
@@ -117,11 +114,9 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 
 		require(msg.sender == campaign.owner, "Caller is not the current owner");
 
-		address oldOwner = campaign.owner;
-
 		campaign.owner = _newOwner;
 
-		emit CampaignOwnerUpdated(_campaignId, oldOwner, campaign.owner);
+		emit CampaignOwnerUpdated(_campaignId, campaign.owner);
 	}
 
 	function updateCampaignTitle(uint32 _campaignId, string calldata _newTitle) public {
@@ -133,11 +128,9 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 
 		require(msg.sender == campaign.owner, "Caller is not the current owner");
 
-		string memory oldTitle = campaign.title;
-
 		campaign.title = _newTitle;
 
-		emit CampaignTitleUpdated(_campaignId, oldTitle, campaign.title);
+		emit CampaignTitleUpdated(_campaignId, campaign.title);
 	}
 
 	function updateCampaignClaim(uint32 _campaignId, string calldata _newClaim) public {
@@ -149,11 +142,9 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 
 		require(msg.sender == campaign.owner, "Caller is not the current owner");
 
-		string memory oldClaim = campaign.claim;
-
 		campaign.claim = _newClaim;
 
-		emit CampaignClaimUpdated(_campaignId, oldClaim, campaign.claim);
+		emit CampaignClaimUpdated(_campaignId, campaign.claim);
 	}
 
 	function updateCampaignDescription(uint32 _campaignId, string calldata _newDescription) public {

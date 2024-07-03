@@ -23,14 +23,14 @@ import {
   generateDonationId,
   generateWithdrawalId,
   createWithdrawal,
-  generateOwnershipTransferredId,
-  createOwnershipTransferred,
+  // generateOwnershipTransferredId,
+  // createOwnershipTransferred,
   updateCampaignOwner,
   updateCampaignTitle,
   updateCampaignClaim,
   updateCampaignDescription
-// } from "../generated/UncrashableEntityHelpers"
-} from "../generated/UncrashableEntityHelpers.edited"
+} from "../generated/UncrashableEntityHelpers"
+// } from "../generated/UncrashableEntityHelpers.edited"
 // import { tokenToString } from "typescript";
 
 export function handleGreetingChange(event: GreetingChange): void {
@@ -81,7 +81,7 @@ export function handleCampaignCreated(event: CampaignCreatedEvent): void {
   });
 }
 
-export function handleDonation(event: DonationEvent, id?: string): void {
+export function handleDonation(event: DonationEvent): void {
 
   let campaignId = createCampaignId(event.params.campaignId);
 
@@ -93,7 +93,7 @@ export function handleDonation(event: DonationEvent, id?: string): void {
     campaign.save();
   }
 
-  let donationId = id ? generateDonationId(Bytes.fromHexString(id)) : generateDonationId(
+  let donationId = false ? generateDonationId(Bytes.fromHexString("id")) : generateDonationId(
     event.transaction.hash.concatI32(
       event.logIndex.toI32()
     )
@@ -110,19 +110,19 @@ export function handleDonation(event: DonationEvent, id?: string): void {
   });
 }
 
-export function handleWithdrawal(event: WithdrawalEvent, id?: string): void {
+export function handleWithdrawal(event: WithdrawalEvent): void {
 
   let campaignId = createCampaignId(event.params.campaignId);
 
   let campaign = getCampaign(campaignId);
   if (campaign !== null) {
-    campaign.amountCollected = campaign.amountCollected.plus(
+    campaign.amountWithdrawn = campaign.amountWithdrawn.plus(
       event.params.amount
     );
     campaign.save();
   }
 
-  let withdrawalId = id ? generateWithdrawalId(Bytes.fromHexString(id)) : generateWithdrawalId(
+  let withdrawalId = false ? generateWithdrawalId(Bytes.fromHexString("id")) : generateWithdrawalId(
     event.transaction.hash.concatI32(
       event.logIndex.toI32()
     )
@@ -139,46 +139,46 @@ export function handleWithdrawal(event: WithdrawalEvent, id?: string): void {
   });
 }
 
-export function handleOwnershipTransferred(event: OwnershipTransferredEvent, id?: string): void {
+// export function handleOwnershipTransferred(event: OwnershipTransferredEvent): void {
 
-  let transferId = id ? generateOwnershipTransferredId(Bytes.fromHexString(id)) : generateOwnershipTransferredId(
-    event.transaction.hash.concatI32(
-      event.logIndex.toI32()
-    )
-  );
+//   let transferId = false ? generateOwnershipTransferredId(Bytes.fromHexString("id")) : generateOwnershipTransferredId(
+//     event.transaction.hash.concatI32(
+//       event.logIndex.toI32()
+//     )
+//   );
 
-  createOwnershipTransferred(
-    transferId, {
-      previousOwner: Bytes.fromHexString(event.params.previousOwner.toHexString()),
-      newOwner: Bytes.fromHexString(event.params.newOwner.toHexString()),
-      blockNumber: event.block.number,
-      blockTimestamp: event.block.timestamp,
-      transactionHash: event.transaction.hash,
-    }
-  );
-}
+//   createOwnershipTransferred(
+//     transferId, {
+//       previousOwner: Bytes.fromHexString(event.params.previousOwner.toHexString()),
+//       newOwner: Bytes.fromHexString(event.params.newOwner.toHexString()),
+//       blockNumber: event.block.number,
+//       blockTimestamp: event.block.timestamp,
+//       transactionHash: event.transaction.hash,
+//     }
+//   );
+// }
 
 export function handleUpdateCampaignOwner(event: CampaignOwnerUpdatedEvent): void {
   updateCampaignOwner(createCampaignId(event.params.campaignId), {
-    owner: event.params.newOwner
+    owner: event.params.owner
   });
 }
 
 export function handleUpdateCampaignTitle(event: CampaignTitleUpdatedEvent): void {
   updateCampaignTitle(createCampaignId(event.params.campaignId), {
-    title: event.params.newTitle
+    title: event.params.title
   });
 }
 
 export function handleUpdateCampaignClaim(event: CampaignClaimUpdatedEvent): void {
   updateCampaignClaim(createCampaignId(event.params.campaignId), {
-    claim: event.params.newClaim
+    claim: event.params.claim
   });
 }
 
 export function handleUpdateCampaignDescription(event: CampaignDescriptionUpdatedEvent): void {
   updateCampaignDescription(createCampaignId(event.params.campaignId), {
-    description: event.params.newDescription
+    description: event.params.description
   });
 }
 

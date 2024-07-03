@@ -1,23 +1,27 @@
 import { describe, test, assert, beforeAll, logStore, newMockEvent } from "matchstick-as";
 import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { Greeting, Sender, Campaign, Donation, Withdrawal, OwnershipTransferred } from "../generated/schema";
-import { generateCampaignId, generateDonationId, generateWithdrawalId, generateOwnershipTransferredId } from "../generated/UncrashableEntityHelpers";
+import { Campaign, Donation, Withdrawal } from "../generated/schema";
+import { generateCampaignId, generateDonationId, generateWithdrawalId } from "../generated/UncrashableEntityHelpers";
 import { 
   CampaignCreated as CampaignCreatedEvent,
   Donation as DonationEvent,
   Withdrawal as WithdrawalEvent,
   OwnershipTransferred as OwnershipTransferredEvent,
-  // CampaignOwnerUpdated as CampaignOwnerUpdatedEvent,
-  // CampaignTitleUpdated as CampaignTitleUpdatedEvent,
-  // CampaignClaimUpdated as CampaignClaimUpdatedEvent,
-  // CampaignDescriptionUpdated as CampaignDescriptionUpdatedEvent
+  CampaignOwnerUpdated as CampaignOwnerUpdatedEvent,
+  CampaignTitleUpdated as CampaignTitleUpdatedEvent,
+  CampaignClaimUpdated as CampaignClaimUpdatedEvent,
+  CampaignDescriptionUpdated as CampaignDescriptionUpdatedEvent
 } from "../generated/SharedRealityExchange/SharedRealityExchange";
 import {
   createCampaignId,
   handleCampaignCreated,
   handleDonation,
-  handleOwnershipTransferred,
-  handleWithdrawal
+  // handleOwnershipTransferred,
+  handleWithdrawal,
+  handleUpdateCampaignOwner,
+  handleUpdateCampaignTitle,
+  handleUpdateCampaignClaim,
+  handleUpdateCampaignDescription
 } from "../src/mapping";
 
 
@@ -25,7 +29,7 @@ describe("Shared Reality Exchange", () => {
 
   beforeAll(() => {
 
-    let newCampaignEvent = createNewCampaignEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "title", "claim", "description")
+    let newCampaignEvent = createCampaignEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "title", "claim", "description")
     handleCampaignCreated(newCampaignEvent)
 
     let newDonationEvent = createDonationEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", BigInt.fromU32(1000))
@@ -34,8 +38,8 @@ describe("Shared Reality Exchange", () => {
     let newWithdrawalEvent = createWithdrawalEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", BigInt.fromU32(100))
     handleWithdrawal(newWithdrawalEvent, '0x02')
 
-    let newTransferEvent = createTransferEvent("0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266")
-    handleOwnershipTransferred(newTransferEvent, '0x03')
+    // let newTransferEvent = createTransferEvent("0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266")
+    // handleOwnershipTransferred(newTransferEvent, '0x03')
 
     // logStore();
   });
@@ -119,32 +123,41 @@ describe("Shared Reality Exchange", () => {
     assert.entityCount("Withdrawal", 1);
   });
 
-  test("OwnershipTransferred", () => {
+  test("Can update a campaign", () => {
 
-    let transferId = generateOwnershipTransferredId(Bytes.fromHexString("0x03"));
+    let campaignId = generateCampaignId(Bytes.fromHexString(createCampaignId(BigInt.fromI32(0))));
 
-    // Creating a new Donation entity
-    let transfer = OwnershipTransferred.load(transferId);
+    let updateOwnerEvent = createUpdateOwnerEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045")
+    handleUpdateCampaignOwner(updateOwnerEvent)
+
+    let updateTitleEvent = createUpdateTitleEvent(0, "new title!")
+    handleUpdateCampaignTitle(updateTitleEvent)
+
+    let updateClaimEvent = createUpdateClaimEvent(0, "new claim!")
+    handleUpdateCampaignClaim(updateClaimEvent)
+
+    let updateDescriptionEvent = createUpdateDescriptionEvent(0, "new description!")
+    handleUpdateCampaignDescription(updateDescriptionEvent)
+
+    let campaign = Campaign.load(campaignId);
     assert.assertNotNull(
-        transfer,
-        "Loaded OwnershipTransferred should not be null"
+        campaign,
+        "Loaded Campaign should not be null"
     );
-    if (transfer) {
-      assert.fieldEquals("OwnershipTransferred", transfer.id, "id", "0x03");
-      assert.fieldEquals("OwnershipTransferred", transfer.id, "previousOwner", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
-      assert.fieldEquals("OwnershipTransferred", transfer.id, "newOwner", "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266");
-    }
 
-    // assert.fieldEquals("OwnershipTransferred", transfer.id, "blockNumber", BigInt.fromI32(234569).toString());
-    // assert.fieldEquals("OwnershipTransferred", transfer.id, "blockTimestamp", BigInt.fromI32(123456789).toString());
-    // assert.fieldEquals("OwnershipTransferred", transfer.id, "transactionHash", Bytes.fromHexString("0x1909fcb0b41989e28308afcb0cf55adb6faba28e14fcbf66c489c69b8fe95dd7").toString());
+    assert.fieldEquals("Campaign", campaignId, "id", "0x00");
+    assert.fieldEquals("Campaign", campaignId, "campaignId", "0");
+    assert.fieldEquals("Campaign", campaignId, "owner", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+    assert.fieldEquals("Campaign", campaignId, "title", "new title!");
+    assert.fieldEquals("Campaign", campaignId, "claim", "new claim!");
+    assert.fieldEquals("Campaign", campaignId, "description", "new description!");
 
-    assert.entityCount("OwnershipTransferred", 1);
+    assert.entityCount("Campaign", 1);
   });
 });
 
 // @ts-ignore
-export function createNewCampaignEvent(campaignId: any, owner: string, title: string, claim: string, description: string): CampaignCreatedEvent {
+export function createCampaignEvent(campaignId: u32, owner: string, title: string, claim: string, description: string): CampaignCreatedEvent {
   // @ts-ignore
   let campaignCreatedEvent = changetype<CampaignCreatedEvent>(newMockEvent())
   campaignCreatedEvent.parameters = new Array()
@@ -165,7 +178,7 @@ export function createNewCampaignEvent(campaignId: any, owner: string, title: st
 }
 
 // @ts-ignore
-export function createDonationEvent(campaignId: any, donor: string, amount: BigInt): DonationEvent {
+export function createDonationEvent(campaignId: u32, donor: string, amount: BigInt): DonationEvent {
   // @ts-ignore
   let donationEvent = changetype<DonationEvent>(newMockEvent())
   donationEvent.parameters = new Array()
@@ -182,7 +195,7 @@ export function createDonationEvent(campaignId: any, donor: string, amount: BigI
 }
 
 // @ts-ignore
-export function createWithdrawalEvent(campaignId: any, withdrawer: string, amount: BigInt): WithdrawalEvent {
+export function createWithdrawalEvent(campaignId: u32, withdrawer: string, amount: BigInt): WithdrawalEvent {
   // @ts-ignore
   let withdrawalEvent = changetype<WithdrawalEvent>(newMockEvent())
   withdrawalEvent.parameters = new Array()
@@ -198,16 +211,58 @@ export function createWithdrawalEvent(campaignId: any, withdrawer: string, amoun
   return withdrawalEvent
 }
 
-export function createTransferEvent(oldOwner: string, newOwner: string): OwnershipTransferredEvent {
-  // @ts-ignore
-  let transferEvent = changetype<OwnershipTransferredEvent>(newMockEvent())
-  transferEvent.parameters = new Array()
+// @ts-ignore
+export function createUpdateOwnerEvent(campaignId: u32, newOwner: string): CampaignOwnerUpdatedEvent {
+  let updateOwnerEvent = changetype<CampaignOwnerUpdatedEvent>(newMockEvent())
+  updateOwnerEvent.parameters = new Array()
 
-  let oldOwnerParam = new ethereum.EventParam("oldOwner", ethereum.Value.fromAddress(Address.fromString(oldOwner)))
-  let newOwnerParam = new ethereum.EventParam("newOwner", ethereum.Value.fromAddress(Address.fromString(newOwner)))
+  let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
+  let newOwnerParam = new ethereum.EventParam("withdrawer", ethereum.Value.fromAddress(Address.fromString(newOwner)))
 
-  transferEvent.parameters.push(oldOwnerParam)
-  transferEvent.parameters.push(newOwnerParam)
+  updateOwnerEvent.parameters.push(campaignIdParam)
+  updateOwnerEvent.parameters.push(newOwnerParam)
 
-  return transferEvent
+  return updateOwnerEvent
+}
+
+// @ts-ignore
+export function createUpdateTitleEvent(campaignId: u32, newTitle: string): CampaignTitleUpdatedEvent {
+  let updateTitleEvent = changetype<CampaignTitleUpdatedEvent>(newMockEvent())
+  updateTitleEvent.parameters = new Array()
+
+  let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
+  let newTitleParam = new ethereum.EventParam("withdrawer", ethereum.Value.fromString(newTitle))
+
+  updateTitleEvent.parameters.push(campaignIdParam)
+  updateTitleEvent.parameters.push(newTitleParam)
+
+  return updateTitleEvent
+}
+
+// @ts-ignore
+export function createUpdateClaimEvent(campaignId: u32, newClaim: string): CampaignClaimUpdatedEvent {
+  let updateClaimEvent = changetype<CampaignClaimUpdatedEvent>(newMockEvent())
+  updateClaimEvent.parameters = new Array()
+
+  let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
+  let newTitleParam = new ethereum.EventParam("withdrawer", ethereum.Value.fromString(newClaim))
+
+  updateClaimEvent.parameters.push(campaignIdParam)
+  updateClaimEvent.parameters.push(newTitleParam)
+
+  return updateClaimEvent
+}
+
+// @ts-ignore
+export function createUpdateDescriptionEvent(campaignId: u32, newDescription: string): CampaignDescriptionUpdatedEvent {
+  let updateDescriptionEvent = changetype<CampaignDescriptionUpdatedEvent>(newMockEvent())
+  updateDescriptionEvent.parameters = new Array()
+
+  let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
+  let newDescriptionParam = new ethereum.EventParam("withdrawer", ethereum.Value.fromString(newDescription))
+
+  updateDescriptionEvent.parameters.push(campaignIdParam)
+  updateDescriptionEvent.parameters.push(newDescriptionParam)
+
+  return updateDescriptionEvent
 }

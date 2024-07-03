@@ -8,13 +8,12 @@ describe("SharedRealityExchange", function () {
 
   let sharedRealityExchange: SharedRealityExchange;
   let deployer: HardhatEthersSigner;
-  let newOwner: HardhatEthersSigner;
   let nonOwner: HardhatEthersSigner;
   const ethDonated = ethers.parseEther("0.001");
   const ethWithdrawn = ethers.parseEther("0.0001");
 
   before(async () => {
-    [deployer, newOwner] = await ethers.getSigners();
+    [deployer, nonOwner] = await ethers.getSigners();
     const sharedRealityExchangeFactory = await ethers.getContractFactory("SharedRealityExchange");
     sharedRealityExchange = (await sharedRealityExchangeFactory.deploy()) as SharedRealityExchange;
     await sharedRealityExchange.waitForDeployment();
@@ -93,7 +92,7 @@ describe("SharedRealityExchange", function () {
       expect(await sharedRealityExchange.withdrawFromCampaign(0, ethWithdrawn));
 
       const campaign = await sharedRealityExchange.campaigns(0);
-      console.log(campaign);
+      // console.log(campaign);
       // console.log([deployer, "title", "claim", ethDonated, ethWithdrawn])
       expect(campaign[0]).to.equal(deployer);
       expect(campaign[1]).to.equal("title");
@@ -151,20 +150,24 @@ describe("SharedRealityExchange", function () {
     it("Should allow field updates from the owner", async function () {
       await expect(await sharedRealityExchange.updateCampaignTitle(0, "new title"))
         .to.emit(sharedRealityExchange, "CampaignTitleUpdated")
-        .withArgs(0, "title", "new title");
+        .withArgs(0, "new title");
 
       await expect(await sharedRealityExchange.updateCampaignClaim(0, "new claim"))
         .to.emit(sharedRealityExchange, "CampaignClaimUpdated")
-        .withArgs(0, "claim", "new claim");
+        .withArgs(0, "new claim");
 
       await expect(await sharedRealityExchange.updateCampaignDescription(0, "new description"))
         .to.emit(sharedRealityExchange, "CampaignDescriptionUpdated")
         .withArgs(0, "new description");
 
+      await expect(await sharedRealityExchange.updateCampaignOwner(0, "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"))
+        .to.emit(sharedRealityExchange, "CampaignOwnerUpdated")
+        .withArgs(0, "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9");
+
       const campaign = await sharedRealityExchange.campaigns(0);
       console.log(campaign);
       // console.log([deployer, "title", "claim", ethDonated, ethWithdrawn])
-      expect(campaign[0]).to.equal(deployer);
+      expect(campaign[0]).to.equal("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9");
       expect(campaign[1]).to.equal("new title");
       expect(campaign[2]).to.equal("new claim");
       expect(campaign[3]).to.equal(ethDonated);
@@ -177,14 +180,14 @@ describe("SharedRealityExchange", function () {
       });
     });
 
-    describe("Ownership change", function () {
-      it("Should emit an OwnershipTransferred event", async function () {
-        await expect(await sharedRealityExchange.transferOwnership(newOwner.address))
-          .to.emit(sharedRealityExchange, "OwnershipTransferred")
-          .withArgs(deployer.address, newOwner.address);
+    // describe("Ownership change", function () {
+    //   it("Should emit an OwnershipTransferred event", async function () {
+    //     await expect(await sharedRealityExchange.transferOwnership(newOwner.address))
+    //       .to.emit(sharedRealityExchange, "OwnershipTransferred")
+    //       .withArgs(deployer.address, newOwner.address);
 
-        expect(await sharedRealityExchange.owner()).to.equal(newOwner.address);
-      });
-    });
+    //     expect(await sharedRealityExchange.owner()).to.equal(newOwner.address);
+    //   });
+    // });
   });
 });

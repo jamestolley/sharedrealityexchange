@@ -30,7 +30,7 @@ type Campaign @entity {
   transactionHash: Bytes!
 }
 
-type Donation @entity {
+type Donation @entity(immutable: true) {
   id: ID!
   campaignId: BigInt! # uint32
   donor: Bytes! # address
@@ -38,6 +38,11 @@ type Donation @entity {
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
+}
+
+type Donor @entity {
+    id: ID!
+    donations: [Donation!]! @derivedFrom(field: "donor")
 }
 
 type Withdrawal @entity(immutable: true) {
@@ -50,11 +55,7 @@ type Withdrawal @entity(immutable: true) {
   transactionHash: Bytes!
 }
 
-type OwnershipTransferred @entity(immutable: true) {
-  id: ID!
-  previousOwner: Bytes! # address
-  newOwner: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+type Withdrawer @entity {
+    id: ID!
+    donations: [Withdrawal!]! @derivedFrom(field: "withdrawer")
 }
