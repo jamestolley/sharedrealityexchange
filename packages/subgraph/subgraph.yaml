@@ -37,7 +37,9 @@ dataSources:
       entities:
         - Campaign
         - Donation
+        - Donor
         - Withdrawal
+        - Withdrawer
       abis:
         - name: SharedRealityExchange
           file: ./abis/localhost_SharedRealityExchange.json

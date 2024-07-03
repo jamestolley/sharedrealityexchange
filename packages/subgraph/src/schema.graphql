@@ -25,37 +25,37 @@ type Campaign @entity {
   description: String! # string
   amountCollected: BigInt! # uint256
   amountWithdrawn: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+  createdAt: BigInt!
+  donations: [Donation!]! @derivedFrom(field: "campaign")
+  withdrawals: [Withdrawal!]! @derivedFrom(field: "campaign")
 }
 
 type Donation @entity(immutable: true) {
   id: ID!
-  campaignId: BigInt! # uint32
-  donor: Bytes! # address
+  campaign: Campaign! # uint32
+  donor: Donor! # address
   amount: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+  createdAt: BigInt!
 }
 
 type Donor @entity {
     id: ID!
     donations: [Donation!]! @derivedFrom(field: "donor")
+    createdAt: BigInt!
+    donationCount: BigInt!
 }
 
 type Withdrawal @entity(immutable: true) {
   id: ID!
-  campaignId: BigInt! # uint32
-  withdrawer: Bytes! # address
+  campaign: Campaign! # uint32
+  withdrawer: Withdrawer! # address
   amount: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+  createdAt: BigInt!
 }
 
 type Withdrawer @entity {
     id: ID!
     donations: [Withdrawal!]! @derivedFrom(field: "withdrawer")
+    createdAt: BigInt!
+    withdrawalCount: BigInt!
 }

@@ -6,7 +6,6 @@ import {
   CampaignCreated as CampaignCreatedEvent,
   Donation as DonationEvent,
   Withdrawal as WithdrawalEvent,
-  OwnershipTransferred as OwnershipTransferredEvent,
   CampaignOwnerUpdated as CampaignOwnerUpdatedEvent,
   CampaignTitleUpdated as CampaignTitleUpdatedEvent,
   CampaignClaimUpdated as CampaignClaimUpdatedEvent,
@@ -16,14 +15,17 @@ import {
   createCampaignId,
   handleCampaignCreated,
   handleDonation,
-  // handleOwnershipTransferred,
   handleWithdrawal,
   handleUpdateCampaignOwner,
   handleUpdateCampaignTitle,
   handleUpdateCampaignClaim,
-  handleUpdateCampaignDescription
+  handleUpdateCampaignDescription,
+  getCampaignId
 } from "../src/mapping";
 
+/**
+ * TODO: add tests for Donors and Withdrawers (including derived fields), and for the deterministic ids of Donations and Withdrawals
+ */
 
 describe("Shared Reality Exchange", () => {
 
@@ -33,20 +35,20 @@ describe("Shared Reality Exchange", () => {
     handleCampaignCreated(newCampaignEvent)
 
     let newDonationEvent = createDonationEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", BigInt.fromU32(1000))
-    handleDonation(newDonationEvent, '0x01')
+    handleDonation(newDonationEvent)
 
     let newWithdrawalEvent = createWithdrawalEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", BigInt.fromU32(100))
-    handleWithdrawal(newWithdrawalEvent, '0x02')
+    handleWithdrawal(newWithdrawalEvent)
 
     // let newTransferEvent = createTransferEvent("0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266")
     // handleOwnershipTransferred(newTransferEvent, '0x03')
 
-    // logStore();
+    logStore();
   });
 
   test("Can create new campaign", () => {
 
-    let campaignId = generateCampaignId(Bytes.fromHexString(createCampaignId(BigInt.fromI32(0))));
+    let campaignId = getCampaignId(0);
 
     let campaign = Campaign.load(campaignId);
     assert.assertNotNull(
@@ -60,72 +62,63 @@ describe("Shared Reality Exchange", () => {
     assert.fieldEquals("Campaign", campaignId, "title", "title");
     assert.fieldEquals("Campaign", campaignId, "claim", "claim");
     assert.fieldEquals("Campaign", campaignId, "description", "description");
-    // if (campaign) {
-    //   assert.fieldEquals("Campaign", campaignId, "blockNumber", campaign.blockNumber.toString());
-    //   assert.fieldEquals("Campaign", campaignId, "blockTimestamp", campaign.blockTimestamp.toString());
-    //   assert.fieldEquals("Campaign", campaignId, "transactionHash", campaign.transactionHash.toString());
-    // }
 
     assert.entityCount("Campaign", 1);
   });
 
   test("Donation", () => {
 
-    // let donationEvent = createDonationEvent(0, "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", BigInt.fromU32(1000))
+    let campaignId = getCampaignId(0);
 
-    let donationId = generateDonationId(Bytes.fromHexString('0x01'));
+    let campaign = Campaign.load(campaignId);
+    assert.assertNotNull(
+        campaign,
+        "Loaded Campaign should not be null"
+    );
 
-    let donation = Donation.load(donationId);
+    let donations = campaign!.donations.load();
+    let donation = donations[0];
     assert.assertNotNull(
       donation,
       "Loaded Donation should not be null"
     );
     if (donation) {
-      assert.fieldEquals("Donation", donation.id, "id", "0x01");
-      assert.fieldEquals("Donation", donation.id, "campaignId", BigInt.fromI32(0).toString());
+      assert.fieldEquals("Donation", donation.id, "campaign", campaignId);
       assert.fieldEquals("Donation", donation.id, "donor", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
       assert.fieldEquals("Donation", donation.id, "amount", BigInt.fromI32(1000).toString());
     }
-
-    // if (donation) {
-    //   assert.fieldEquals("Donation", donation.id, "blockNumber", BigInt.fromI32(234567).toString());
-    //   assert.fieldEquals("Donation", donation.id, "blockTimestamp", BigInt.fromI32(123456787).toString());
-    //   assert.fieldEquals("Donation", donation.id, "transactionHash", Bytes.fromHexString("0x1909fcb0b41989e28308afcb0cf55adb6faba28e14fcbf66c489c69b8fe95dd5").toString());
-    // }
 
     assert.entityCount("Donation", 1);
   });
 
   test("Withdrawal", () => {
 
-    // let donationEvent = createDonationEvent(0, "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", BigInt.fromU32(1000))
+    let campaignId = getCampaignId(0);
 
-    let withdrawalId = generateWithdrawalId(Bytes.fromHexString('0x02'));
+    let campaign = Campaign.load(campaignId);
+    assert.assertNotNull(
+        campaign,
+        "Loaded Campaign should not be null"
+    );
 
-    let withdrawal = Withdrawal.load(withdrawalId);
+    let withdrawals = campaign!.withdrawals.load();
+    let withdrawal = withdrawals[0];
     assert.assertNotNull(
       withdrawal,
       "Loaded Withdrawal should not be null"
     );
     if (withdrawal) {
-      assert.fieldEquals("Withdrawal", withdrawal.id, "id", "0x02");
-      assert.fieldEquals("Withdrawal", withdrawal.id, "campaignId", "0");
+      assert.fieldEquals("Withdrawal", withdrawal.id, "campaign", campaignId);
       assert.fieldEquals("Withdrawal", withdrawal.id, "withdrawer", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
       assert.fieldEquals("Withdrawal", withdrawal.id, "amount", "100");
     }
-
-    // if (withdrawal) {
-    //   assert.fieldEquals("Donation", withdrawal.id, "blockNumber", BigInt.fromI32(234567).toString());
-    //   assert.fieldEquals("Donation", withdrawal.id, "blockTimestamp", BigInt.fromI32(123456787).toString());
-    //   assert.fieldEquals("Donation", withdrawal.id, "transactionHash", Bytes.fromHexString("0x1909fcb0b41989e28308afcb0cf55adb6faba28e14fcbf66c489c69b8fe95dd5").toString());
-    // }
 
     assert.entityCount("Withdrawal", 1);
   });
 
   test("Can update a campaign", () => {
 
-    let campaignId = generateCampaignId(Bytes.fromHexString(createCampaignId(BigInt.fromI32(0))));
+    let campaignId = getCampaignId(0);
 
     let updateOwnerEvent = createUpdateOwnerEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045")
     handleUpdateCampaignOwner(updateOwnerEvent)
@@ -183,6 +176,7 @@ export function createDonationEvent(campaignId: u32, donor: string, amount: BigI
   let donationEvent = changetype<DonationEvent>(newMockEvent())
   donationEvent.parameters = new Array()
 
+  // let theCampaignId = getCampaignId(campaignId)
   let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
   let donorParam = new ethereum.EventParam("donor", ethereum.Value.fromAddress(Address.fromString(donor)))
   let amountParam = new ethereum.EventParam("amount", ethereum.Value.fromUnsignedBigInt(amount))
@@ -200,6 +194,7 @@ export function createWithdrawalEvent(campaignId: u32, withdrawer: string, amoun
   let withdrawalEvent = changetype<WithdrawalEvent>(newMockEvent())
   withdrawalEvent.parameters = new Array()
 
+  // let theCampaignId = getCampaignId(campaignId)
   let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
   let withdrawerParam = new ethereum.EventParam("withdrawer", ethereum.Value.fromAddress(Address.fromString(withdrawer)))
   let amountParam = new ethereum.EventParam("amount", ethereum.Value.fromUnsignedBigInt(amount))

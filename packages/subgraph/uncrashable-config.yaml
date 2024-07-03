@@ -31,7 +31,19 @@ entitySettings:
     entityId:
       - name: id
         type: Bytes
+  Donor:
+    useDefault: []
+    setters: []
+    entityId:
+      - name: id
+        type: Bytes
   Withdrawal:
+    useDefault: []
+    setters: []
+    entityId:
+      - name: id
+        type: Bytes
+  Withdrawer:
     useDefault: []
     setters: []
     entityId:

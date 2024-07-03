@@ -1,22 +1,24 @@
-import { Bytes, BigInt, ByteArray } from "@graphprotocol/graph-ts";
+import { Bytes, BigInt, Address } from "@graphprotocol/graph-ts";
 import {
   YourContract,
   GreetingChange,
 } from "../generated/YourContract/YourContract";
 import { 
-  SharedRealityExchange,
   CampaignCreated as CampaignCreatedEvent,
   Donation as DonationEvent,
   Withdrawal as WithdrawalEvent,
-  OwnershipTransferred as OwnershipTransferredEvent,
   CampaignOwnerUpdated as CampaignOwnerUpdatedEvent,
   CampaignTitleUpdated as CampaignTitleUpdatedEvent,
   CampaignClaimUpdated as CampaignClaimUpdatedEvent,
   CampaignDescriptionUpdated as CampaignDescriptionUpdatedEvent
 } from "../generated/SharedRealityExchange/SharedRealityExchange";
-import { Greeting, Sender, Campaign, Donation, Withdrawal, OwnershipTransferred } from "../generated/schema";
+import { Greeting, Sender, Donor, Withdrawer } from "../generated/schema";
 import {
   generateCampaignId,
+  generateDonorId,
+  generateWithdrawerId,
+  getOrInitializeDonor,
+  getOrInitializeWithdrawer,
   createCampaign,
   getCampaign,
   createDonation,
@@ -28,7 +30,9 @@ import {
   updateCampaignOwner,
   updateCampaignTitle,
   updateCampaignClaim,
-  updateCampaignDescription
+  updateCampaignDescription,
+  getDonor,
+  getWithdrawer
 } from "../generated/UncrashableEntityHelpers"
 // } from "../generated/UncrashableEntityHelpers.edited"
 // import { tokenToString } from "typescript";
@@ -75,16 +79,14 @@ export function handleCampaignCreated(event: CampaignCreatedEvent): void {
     description: event.params.description,
     amountCollected: BigInt.fromI32(0),
     amountWithdrawn: BigInt.fromI32(0),
-    blockNumber: event.block.number,
-    blockTimestamp: event.block.timestamp,
-    transactionHash: event.transaction.hash,
+    createdAt: event.block.timestamp,
   });
 }
 
 export function handleDonation(event: DonationEvent): void {
 
-  let campaignId = createCampaignId(event.params.campaignId);
-
+  // update the campaign's amountDonated
+  let campaignId = getCampaignId(event.params.campaignId.toI32());
   let campaign = getCampaign(campaignId);
   if (campaign !== null) {
     campaign.amountCollected = campaign.amountCollected.plus(
@@ -93,27 +95,35 @@ export function handleDonation(event: DonationEvent): void {
     campaign.save();
   }
 
-  let donationId = false ? generateDonationId(Bytes.fromHexString("id")) : generateDonationId(
-    event.transaction.hash.concatI32(
-      event.logIndex.toI32()
-    )
-  );
+  // create or update the donor
+  let donorAddressAsHexString = event.params.donor.toHexString();
+  let donorId = generateDonorId(Bytes.fromHexString(donorAddressAsHexString));
+  let entity = getOrInitializeDonor(donorId, {
+    createdAt: event.block.timestamp,
+    donationCount: BigInt.fromI32(0)
+  })
+
+  let donor = entity.entity;
+  donor.donationCount = donor.donationCount.plus(BigInt.fromI32(1));
+  donor.save()
+
+  // create the Donation
+  let hex_string = ensureEvenCharacterHexString(event.transaction.hash.toHex().concat(event.logIndex.toString()))
+  let donationId = generateDonationId(Bytes.fromHexString(hex_string));
 
   createDonation(
     donationId, {
-    campaignId: event.params.campaignId,
-    donor: Bytes.fromHexString(event.params.donor.toHexString()),
+    campaign: campaignId,
+    donor: event.params.donor.toHexString(),
     amount: event.params.amount,
-    blockNumber: event.block.number,
-    blockTimestamp: event.block.timestamp,
-    transactionHash: event.transaction.hash,
+    createdAt: event.block.timestamp,
   });
 }
 
 export function handleWithdrawal(event: WithdrawalEvent): void {
 
-  let campaignId = createCampaignId(event.params.campaignId);
-
+  // add withdraw amount from campaign.amountWithdrawn
+  let campaignId = getCampaignId(event.params.campaignId.toI32())
   let campaign = getCampaign(campaignId);
   if (campaign !== null) {
     campaign.amountWithdrawn = campaign.amountWithdrawn.plus(
@@ -122,20 +132,27 @@ export function handleWithdrawal(event: WithdrawalEvent): void {
     campaign.save();
   }
 
-  let withdrawalId = false ? generateWithdrawalId(Bytes.fromHexString("id")) : generateWithdrawalId(
-    event.transaction.hash.concatI32(
-      event.logIndex.toI32()
-    )
-  );
+  // create or update the Withdrawer
+  let withdrawerAddressAsHexString = event.params.withdrawer.toHexString();
+  let withdrawerId = generateWithdrawerId(Bytes.fromHexString(withdrawerAddressAsHexString));
+  let entity = getOrInitializeWithdrawer(withdrawerId, {
+    createdAt: event.block.timestamp,
+    withdrawalCount: BigInt.fromI32(0)
+  })
 
+  let withdrawer = entity.entity;
+  withdrawer.withdrawalCount = withdrawer.withdrawalCount.plus(BigInt.fromI32(1));
+  withdrawer.save()
+
+  // create the withdrawal
+  let hex_string = ensureEvenCharacterHexString(event.transaction.hash.toHex().concat(event.logIndex.toString()))
+  let withdrawalId = generateWithdrawalId(Bytes.fromHexString(hex_string));
   createWithdrawal(
     withdrawalId, {
-    campaignId: event.params.campaignId,
-    withdrawer: Bytes.fromHexString(event.params.withdrawer.toHexString()),
+    campaign: campaignId,
+    withdrawer: event.params.withdrawer.toHexString(),
     amount: event.params.amount,
-    blockNumber: event.block.number,
-    blockTimestamp: event.block.timestamp,
-    transactionHash: event.transaction.hash,
+    createdAt: event.block.timestamp,
   });
 }
 
@@ -183,6 +200,23 @@ export function handleUpdateCampaignDescription(event: CampaignDescriptionUpdate
 }
 
 /**
+ * Some functions require that the hex strings have an even number of characters
+ * @param hex_string string
+ * @returns string
+ */
+export function ensureEvenCharacterHexString(hex_string: string): string {
+
+  if (hex_string.length % 2) {
+    if (hex_string.startsWith("0x")) {
+      hex_string = hex_string.replace("0x", "");
+    }
+    hex_string = "0x0" + hex_string;
+  }
+
+  return hex_string
+}
+
+/**
  * Takes a BigInt and returns a hex string in the form e.g. "0x0001"
  * @param BigInt campaignId 
  * @returns string
@@ -202,16 +236,29 @@ export function createCampaignId(campaignId: BigInt): string {
 
   let hex_string: string = campaignId.toHexString();
 
-  if (hex_string.length % 2) {
-    if (hex_string.startsWith("0x")) {
-      hex_string = hex_string.replace("0x", "");
-    }
-    hex_string = "0x0" + hex_string;
-  }
+  hex_string = ensureEvenCharacterHexString(hex_string);
 
   let bytes: Bytes = Bytes.fromHexString(hex_string);
 
   let id: string = generateCampaignId(bytes);
 
   return id;
+}
+
+export function incrementDonationCount(entityId: string): void {
+  let entity = getDonor(entityId);
+  entity.donationCount = entity.donationCount.plus(BigInt.fromI32(1));
+
+  entity.save();
+}
+
+export function incrementWithdrawalCount(entityId: string): void {
+  let entity = getWithdrawer(entityId);
+  entity.withdrawalCount = entity.withdrawalCount.plus(BigInt.fromI32(1));
+
+  entity.save();
+}
+
+export function getCampaignId(campaignId: u32): string {
+  return generateCampaignId(Bytes.fromHexString(createCampaignId(BigInt.fromU32(campaignId))));
 }
