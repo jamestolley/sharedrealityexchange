@@ -83,5 +83,28 @@ module.exports = {
         "pulse-fast": "pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite",
       },
     },
+    // below are custom to Shared Reality Exchange
+    colors: {
+      srered: {
+        light: '',
+        DEFAULT: '#923336',
+        dark: ''
+      },
+      sreblue: {
+        light: '',
+        DEFAULT: '#13284c',
+        dark: ''
+      },
+      sregreen: {
+        light: '',
+        DEFAULT: '#645d22',
+        dark: ''
+      },
+      sregold: {
+        light: '',
+        DEFAULT: '#f5b324',
+        dark: ''
+      }
+    }
   },
 };
