@@ -1,4 +1,4 @@
-import { CreateCampaign } from "./_components/CreateCampaign";
+import { CreateCampaign } from "../_components/CreateCampaign";
 import { NextPage } from "next";
 import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 

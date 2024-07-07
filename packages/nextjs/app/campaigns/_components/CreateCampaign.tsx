@@ -55,16 +55,9 @@ export const CreateCampaign = () => {
   useScaffoldWatchContractEvent({
     contractName: "SharedRealityExchange",
     eventName: "CampaignCreated",
-    // onLogs: logs => {
-    //   logs.map(log => {
-    //     const { greetingSetter, value, premium, newGreeting } = log.args;
-    //     console.log("📡 GreetingChange event", greetingSetter, value, premium, newGreeting);
-    //   });
-    // },
     onLogs: logs => {
       console.log(logs);
       logs.map(log => {
-        // console.log(log)
         const { campaignId, owner, title, claim } = log.args as unknown as {
           campaignId: string;
           owner: string;
@@ -72,7 +65,6 @@ export const CreateCampaign = () => {
           claim: string;
           description: string;
         };
-        // console.log("CampaignCreated\nID:", campaignId, "\nCreator:", owner, "\nTitle: ", title, "\nClaim: ", claim, "\nDescription: ", description);
         if (userAccount.address === owner && title == titleInput && claim == claimInput) {
           router.push(`/campaigns/${campaignId}`);
         }
@@ -110,10 +102,9 @@ export const CreateCampaign = () => {
           },
         },
       );
-    } catch (e: unknown) {
+    } catch (error: unknown) {
       const message = getErrorMessage(error);
       notification.error(message, { position: "top-right", duration: 6000 });
-      // console.error(`Error: failed to create the campaign`, e)
     }
   };
 
