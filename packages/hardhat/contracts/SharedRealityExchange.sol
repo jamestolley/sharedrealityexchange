@@ -62,13 +62,15 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 	event Donation(
 		uint32 campaignId,
 		address donor,
-		uint256 amount
+		uint256 amount,
+		string comment
 	);
 	
 	event Withdrawal(
 		uint32 campaignId,
 		address withdrawer,
-		uint256 amount
+		uint256 amount,
+		string comment
 	);
 
 	event Follow(
@@ -173,8 +175,12 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		count = campaigns.length;
 	}
 
-	function donateToCampaign(uint32 _campaignId) public payable {
+	function donateToCampaign(uint32 _campaignId, string calldata _comment) public payable {
+
+		require(bytes(_comment).length < 256, "The comment is longer than 256 bytes");
+
 		require(campaigns.length >= _campaignId + 1, "No such campaign");
+
 		require(msg.value > 0, "Minimum payment amount not met.");
 
 		/**
@@ -194,10 +200,12 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 
 		campaigns[_campaignId].amountCollected = newAmountCollected;
 
-		emit Donation(_campaignId, msg.sender, msg.value);
+		emit Donation(_campaignId, msg.sender, msg.value, _comment);
 	}
 
-	function withdrawFromCampaign(uint32 _campaignId, uint256 _amountRequested) external nonReentrant {
+	function withdrawFromCampaign(uint32 _campaignId, uint256 _amountRequested, string calldata _comment) external nonReentrant {
+
+		require(bytes(_comment).length < 256, "The comment is longer than 256 bytes");
 
 		// find the total available for withdrawl
 		Campaign storage campaign = campaigns[_campaignId];
@@ -220,7 +228,7 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		require(success, "Withdrawal unsuccessful");
 
 		// record the withdrawl
-		emit Withdrawal(_campaignId, msg.sender, _amountRequested);
+		emit Withdrawal(_campaignId, msg.sender, _amountRequested, _comment);
 	}
 
 	function follow(uint32 _campaignId) external {

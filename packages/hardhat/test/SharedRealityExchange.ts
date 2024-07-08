@@ -58,8 +58,11 @@ describe("SharedRealityExchange", function () {
     });
 
     it("Should accept a donation", async function () {
+      const comment = "This is the donation comment";
       const options = { value: ethDonated };
-      expect(await sharedRealityExchange.donateToCampaign(0, options));
+      await expect(await sharedRealityExchange.donateToCampaign(0, comment, options))
+        .to.emit(sharedRealityExchange, "Donation")
+        .withArgs(0, deployer, ethDonated, comment);
 
       const campaign = await sharedRealityExchange.campaigns(0);
       // console.log(campaign);
@@ -72,9 +75,10 @@ describe("SharedRealityExchange", function () {
 
     it("Should reject a withdrawl from a non-owner", async function () {
       const nonOwnerContract = sharedRealityExchange.connect(nonOwner);
+      const comment = "This is the failed withdrawal comment";
 
       expect(
-        nonOwnerContract.withdrawFromCampaign(0, ethWithdrawn).then(tx => {
+        nonOwnerContract.withdrawFromCampaign(0, ethWithdrawn, comment).then(tx => {
           return tx.wait().then(
             () => {
               // console.log("This should have failed!!");
@@ -89,7 +93,11 @@ describe("SharedRealityExchange", function () {
     });
 
     it("Should allow a withdrawl from the owner", async function () {
-      expect(await sharedRealityExchange.withdrawFromCampaign(0, ethWithdrawn));
+      const comment = "This is the successful withdrawal comment";
+
+      await expect(await sharedRealityExchange.withdrawFromCampaign(0, ethWithdrawn, comment))
+        .to.emit(sharedRealityExchange, "Withdrawal")
+        .withArgs(0, deployer, ethWithdrawn, comment);
 
       const campaign = await sharedRealityExchange.campaigns(0);
       // console.log(campaign);
