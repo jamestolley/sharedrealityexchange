@@ -1,6 +1,7 @@
 "use client";
 
-import { notFound, useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { notFound, useParams, useRouter, useSearchParams } from "next/navigation";
 import { CampaignDisplay } from "../_components/CampaignDisplay";
 import { CampaignDonate } from "../_components/CampaignDonate";
 import { CampaignsDonationsList } from "../_components/CampaignDonations";
@@ -29,8 +30,19 @@ type CampaignType = {
 };
 
 const CampaignDetail: NextPage = () => {
+  const searchParams = useSearchParams();
   const router = useRouter();
+
+  const currentTabIndex = searchParams.get("tab") ?? 0;
+  const [tabIndex, setTabIndex] = useState(currentTabIndex);
   const { campaignId } = useParams<{ campaignId: string }>();
+
+  useEffect(() => {
+    const getTab = searchParams.get("tab");
+    if (getTab != tabIndex) {
+      router.replace(`?tab=${tabIndex}`);
+    }
+  }, [tabIndex]);
 
   const { writeContractAsync } = useScaffoldWriteContract("SharedRealityExchange");
 
@@ -175,7 +187,15 @@ const CampaignDetail: NextPage = () => {
             )}
           </div>
           <div role="tablist" className="tabs tabs-lifted">
-            <input type="radio" name="campaign_tabs" role="tab" className="tab" aria-label="Overview" defaultChecked />
+            <input
+              type="radio"
+              name="campaign_tabs"
+              role="tab"
+              className="tab"
+              aria-label="Overview"
+              defaultChecked={tabIndex == 0}
+              onClick={() => setTabIndex(0)}
+            />
             <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
               <div className="flex items-center justify-center">
                 <div className="flex flex-col w-full gap-2 p-2 m-4 border shadow-xl border-base-300 bg-base-200 sm:rounded-lg">
@@ -197,23 +217,63 @@ const CampaignDetail: NextPage = () => {
                 </div>
               </div>
             </div>
-            <input type="radio" name="campaign_tabs" role="tab" className="tab" aria-label="Conversation" />
+            <input
+              type="radio"
+              name="campaign_tabs"
+              role="tab"
+              className="tab"
+              aria-label="Conversation"
+              defaultChecked={tabIndex == 1}
+              onClick={() => setTabIndex(1)}
+            />
             <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
               Conversation
             </div>
-            <input type="radio" name="campaign_tabs" role="tab" className="tab" aria-label="Updates" />
+            <input
+              type="radio"
+              name="campaign_tabs"
+              role="tab"
+              className="tab"
+              aria-label="Updates"
+              defaultChecked={tabIndex == 2}
+              onClick={() => setTabIndex(2)}
+            />
             <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
               Updates
             </div>
-            <input type="radio" name="campaign_tabs" role="tab" className="tab" aria-label="Donations" />
+            <input
+              type="radio"
+              name="campaign_tabs"
+              role="tab"
+              className="tab"
+              aria-label="Donations"
+              defaultChecked={tabIndex == 3}
+              onClick={() => setTabIndex(3)}
+            />
             <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
               <CampaignsDonationsList campaign={campaign} />
             </div>
-            <input type="radio" name="campaign_tabs" role="tab" className="tab" aria-label="Withdrawals" />
+            <input
+              type="radio"
+              name="campaign_tabs"
+              role="tab"
+              className="tab"
+              aria-label="Withdrawals"
+              defaultChecked={tabIndex == 4}
+              onClick={() => setTabIndex(4)}
+            />
             <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
               <CampaignsWithdrawalsList campaign={campaign} />
             </div>
-            <input type="radio" name="campaign_tabs" role="tab" className="tab" aria-label="Followers" />
+            <input
+              type="radio"
+              name="campaign_tabs"
+              role="tab"
+              className="tab"
+              aria-label="Followers"
+              defaultChecked={tabIndex == 5}
+              onClick={() => setTabIndex(5)}
+            />
             <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
               <CampaignsFollowsList campaign={campaign} />
             </div>
