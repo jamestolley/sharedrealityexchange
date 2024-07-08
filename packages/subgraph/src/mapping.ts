@@ -1,4 +1,4 @@
-import { Bytes, BigInt, Address } from "@graphprotocol/graph-ts";
+import { Bytes, BigInt, store } from "@graphprotocol/graph-ts";
 import {
   YourContract,
   GreetingChange,
@@ -10,9 +10,11 @@ import {
   CampaignOwnerUpdated as CampaignOwnerUpdatedEvent,
   CampaignTitleUpdated as CampaignTitleUpdatedEvent,
   CampaignClaimUpdated as CampaignClaimUpdatedEvent,
-  CampaignDescriptionUpdated as CampaignDescriptionUpdatedEvent
+  CampaignDescriptionUpdated as CampaignDescriptionUpdatedEvent,
+  Follow as FollowEvent,
+  Unfollow as UnfollowEvent
 } from "../generated/SharedRealityExchange/SharedRealityExchange";
-import { Greeting, Sender, Donor, Withdrawer } from "../generated/schema";
+import { Greeting, Sender } from "../generated/schema";
 import {
   generateCampaignId,
   generateDonorId,
@@ -25,14 +27,14 @@ import {
   generateDonationId,
   generateWithdrawalId,
   createWithdrawal,
-  // generateOwnershipTransferredId,
-  // createOwnershipTransferred,
   updateCampaignOwner,
   updateCampaignTitle,
   updateCampaignClaim,
   updateCampaignDescription,
   getDonor,
-  getWithdrawer
+  getWithdrawer,
+  createFollow,
+  generateFollowId
 } from "../generated/UncrashableEntityHelpers"
 // } from "../generated/UncrashableEntityHelpers.edited"
 // import { tokenToString } from "typescript";
@@ -156,6 +158,38 @@ export function handleWithdrawal(event: WithdrawalEvent): void {
   });
 }
 
+export function handleFollow(event: FollowEvent): void {
+
+  // add withdraw amount from campaign.amountWithdrawn
+  let campaignId = getCampaignId(event.params.campaignId.toI32())
+  let campaign = getCampaign(campaignId);
+
+  // generate the followId from the campaignId and the user address
+  let campaignIdHexString = ensureEvenCharacterHexString(event.params.campaignId.toHexString());
+  let userHexString = event.params.user.toHexString().replace("0x","");
+  let campaignAndUserHexString = campaignIdHexString.concat(userHexString);
+  let followId = generateFollowId(Bytes.fromHexString(campaignAndUserHexString));
+
+  createFollow(
+    followId, {
+      campaign: campaign.id,
+      user: Bytes.fromHexString(event.params.user.toHexString()),
+      createdAt: event.block.timestamp,
+    }
+  );
+}
+
+export function handleUnfollow(event: UnfollowEvent): void {
+
+  // generate the followId from the campaignId and the user address
+  let campaignIdHexString = ensureEvenCharacterHexString(event.params.campaignId.toHexString());
+  let userHexString = event.params.user.toHexString().replace("0x","");
+  let campaignAndUserHexString = campaignIdHexString.concat(userHexString);
+  let followId = generateFollowId(Bytes.fromHexString(campaignAndUserHexString));
+
+  store.remove('Follow', followId);
+}
+
 // export function handleOwnershipTransferred(event: OwnershipTransferredEvent): void {
 
 //   let transferId = false ? generateOwnershipTransferredId(Bytes.fromHexString("id")) : generateOwnershipTransferredId(
@@ -213,7 +247,7 @@ export function ensureEvenCharacterHexString(hex_string: string): string {
     hex_string = "0x0" + hex_string;
   }
 
-  return hex_string
+  return hex_string.slice(0, 44)
 }
 
 /**
@@ -260,5 +294,11 @@ export function incrementWithdrawalCount(entityId: string): void {
 }
 
 export function getCampaignId(campaignId: u32): string {
-  return generateCampaignId(Bytes.fromHexString(createCampaignId(BigInt.fromU32(campaignId))));
+  return generateCampaignId(
+    Bytes.fromHexString(
+      createCampaignId(
+        BigInt.fromU32(campaignId)
+      )
+    )
+  );
 }
