@@ -109,6 +109,35 @@ describe("SharedRealityExchange", function () {
       expect(campaign[4]).to.equal(ethWithdrawn);
     });
 
+    it("Should reject an update from a non-owner", async function () {
+      const nonOwnerContract = sharedRealityExchange.connect(nonOwner);
+      const title = "This is the failed update title";
+      const comment = "This is the failed update comment";
+
+      expect(
+        nonOwnerContract.createCampaignUpdate(0, title, comment).then(tx => {
+          return tx.wait().then(
+            () => {
+              // console.log("This should have failed!!");
+              expect(true).to.equal(false);
+            },
+            () => {
+              expect(true).to.equal(true);
+            },
+          );
+        }),
+      );
+    });
+
+    it("Should allow an update from the owner", async function () {
+      const title = "This is the successful update title";
+      const comment = "This is the successful update comment";
+
+      await expect(await sharedRealityExchange.createCampaignUpdate(0, title, comment))
+        .to.emit(sharedRealityExchange, "CampaignUpdate")
+        .withArgs(0, deployer, title, comment);
+    });
+
     it("Should reject field updates from a non-owner", async function () {
       const nonOwnerContract = sharedRealityExchange.connect(nonOwner);
 

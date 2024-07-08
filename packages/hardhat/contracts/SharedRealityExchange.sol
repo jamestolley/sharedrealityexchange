@@ -83,6 +83,13 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		address user
 	);
 
+	event CampaignUpdate(
+		uint32 campaignId,
+		address author,
+		string title,
+		string content
+	);
+
 	constructor() Ownable() {}
 
 	function createCampaign(
@@ -237,6 +244,17 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 
 	function unfollow(uint32 _campaignId) external {
 		emit Unfollow(_campaignId, msg.sender);
+	}
+
+	function createCampaignUpdate(uint32 _campaignId, string calldata _title, string calldata _content) external {
+
+		require(campaigns.length > _campaignId, "Campaign not found");
+
+		Campaign storage campaign = campaigns[_campaignId];
+
+		require(msg.sender == campaign.owner, "Caller is not the current owner");
+
+		emit CampaignUpdate(_campaignId, campaign.owner, _title, _content);
 	}
 
 }
