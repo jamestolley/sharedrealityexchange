@@ -1,39 +1,31 @@
-import { useEffect } from "react";
-import { GQL_SOCIAL_FOLLOWERS_by_campaignId_and_address } from "../../_helpers/Queries";
+"use client";
+
+import { useState } from "react";
 import { FollowButton } from "./FollowButton";
 import { UnfollowButton } from "./UnfollowButton";
-import { useQuery } from "@apollo/client";
 import { useAccount } from "wagmi";
 
 interface FollowToggleProps {
   campaignId: number;
+  follows: {
+    user: string;
+  }[];
 }
 
-export const FollowToggle = ({ campaignId }: FollowToggleProps) => {
+export const FollowToggle = ({ campaignId, follows }: FollowToggleProps) => {
+  // console.log("campaign.follows", follows)
+
   const userAccount = useAccount();
 
-  const { error, data } = useQuery(GQL_SOCIAL_FOLLOWERS_by_campaignId_and_address(), {
-    variables: {
-      fundRunId: campaignId,
-      user: userAccount.address,
-    },
-    pollInterval: 0,
-  });
+  const followForThisUser = follows.filter(follow => follow.user.toLowerCase() == userAccount.address?.toLowerCase());
 
-  useEffect(() => {
-    if (error !== undefined && error !== null)
-      console.log("GQL_SOCIAL_FOLLOWERS_By_FundRunId_and_Address Query Error: ", error);
-  }, [error]);
+  // console.log("followForThisUser", followForThisUser)
 
-  if (data && data.campaigns && data.campaigns.length) {
-    const campaign = data.campaigns[0];
+  const [following, setFollowing] = useState(followForThisUser?.length > 0);
 
-    if (campaign.followers?.length > 0) {
-      return <UnfollowButton campaignId={campaignId} />;
-    } else {
-      return <FollowButton campaignId={campaignId} />;
-    }
+  if (following) {
+    return <UnfollowButton setFollowing={setFollowing} campaignId={campaignId} />;
   } else {
-    return <div>No follow button to show</div>;
+    return <FollowButton setFollowing={setFollowing} campaignId={campaignId} />;
   }
 };

@@ -5,6 +5,7 @@ export const GQL_CAMPAIGN_by_campaignId = () => {
   return gql`
     query ($campaignId: Int!) {
       campaigns(where: { campaignId: $campaignId }) {
+        id
         campaignId
         owner
         title
@@ -12,6 +13,10 @@ export const GQL_CAMPAIGN_by_campaignId = () => {
         description
         amountCollected
         amountWithdrawn
+      }
+      follows(where: { campaign_: { campaignId: $campaignId } }) {
+        user
+        createdAt
       }
     }
   `;
@@ -31,6 +36,10 @@ export const GQL_CAMPAIGNS_list = () => {
         description
         amountCollected
         amountWithdrawn
+      }
+      follows {
+        user
+        createdAt
       }
     }
   `;
@@ -371,6 +380,89 @@ export const GQL_SIGNERS_snapshot = (searchInput: string) => {
 
 // fetch donations for a campaign
 // queries page
+export const GQL_DONATIONS_by_campaignid = () => {
+  return gql`
+    query ($limit: Int!, $offset: Int!, $campaignid: String) {
+      donations(
+        where: { campaign: $campaignid }
+        orderBy: createdAt
+        orderDirection: desc
+        first: $limit
+        skip: $offset
+      ) {
+        id
+        donor {
+          id
+        }
+        amount
+        campaign {
+          id
+          campaignId
+          title
+        }
+        createdAt
+      }
+    }
+  `;
+};
+
+// fetch donations for a campaign
+// queries page
+export const GQL_WITHDRAWALS_by_campaignid = () => {
+  return gql`
+    query ($limit: Int!, $offset: Int!, $campaignid: String) {
+      withdrawals(
+        where: { campaign: $campaignid }
+        orderBy: createdAt
+        orderDirection: desc
+        first: $limit
+        skip: $offset
+      ) {
+        id
+        withdrawer {
+          id
+        }
+        amount
+        campaign {
+          id
+          campaignId
+          title
+        }
+        createdAt
+      }
+    }
+  `;
+};
+
+// fetch donations for a campaign
+// queries page
+export const GQL_FOLLOWS_by_campaignid = () => {
+  return gql`
+    query ($limit: Int!, $offset: Int!, $campaignid: String) {
+      follows(
+        where: { campaign: $campaignid }
+        orderBy: createdAt
+        orderDirection: desc
+        first: $limit
+        skip: $offset
+      ) {
+        id
+        user {
+          id
+        }
+        campaign {
+          id
+          campaignId
+          title
+        }
+        createdAt
+      }
+    }
+  `;
+};
+
+// fetch donations for a campaign
+// queries page
 export const GQL_DONATIONS = (searchInput: string) => {
   if (searchInput.trim().length === 0)
     return gql`
@@ -381,6 +473,7 @@ export const GQL_DONATIONS = (searchInput: string) => {
           amount
           campaign {
             id
+            campaignId
             title
           }
         }
@@ -401,6 +494,7 @@ export const GQL_DONATIONS = (searchInput: string) => {
           amount
           campaign {
             id
+            campaignId
             title
           }
         }
@@ -436,9 +530,10 @@ export const GQL_SOCIAL_FOLLOWERS_by_campaignId_and_address = () => {
   return gql`
     query ($campaignId: Int!, $user: String!) {
       campaigns(where: { campaignId: $campaignId }) {
-        followers(where: { user: $user }) {
-          id
-          campaignId
+        follows(where: { user: $user }) {
+          campaign {
+            title
+          }
           user
         }
       }
@@ -478,7 +573,6 @@ export const GQL_SOCIAL_FOLLOWERS_by_campaignId = () => {
   return gql`
     query ($limit: Int!, $offset: Int!, $campaignId: Int!) {
       follows(first: $limit, skip: $offset, where: { campaignId: $campaignId, campaign_not: null }) {
-        id
         user
       }
     }

@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { GQL_CAMPAIGNS_list } from "../_helpers/Queries";
-import { CampaignDisplay } from "./CampaignDisplay";
+import { GQL_WITHDRAWALS_by_campaignid } from "../_helpers/Queries";
 import { useQuery } from "@apollo/client";
+import { formatEther } from "viem";
 import getErrorMessage from "~~/components/GetErrorMessage";
+import { Address } from "~~/components/scaffold-eth";
 
 type Campaign = {
-  campaignId: string;
+  id: string;
+  campaignId: number;
   owner: string;
   title: string;
   claim: string;
@@ -17,20 +18,36 @@ type Campaign = {
   amountWithdrawn: bigint;
 };
 
-export const CampaignsList = () => {
+type CampaignsWithdrawalsListProps = {
+  campaign: Campaign;
+};
+
+type Withdrawal = {
+  id: string;
+  withdrawer: {
+    id: string;
+  };
+  campaign: Campaign;
+  amount: bigint;
+  createdAt: number;
+};
+
+export const CampaignsWithdrawalsList = ({ campaign }: CampaignsWithdrawalsListProps) => {
   const [pageSize, setPageSize] = useState(25);
   const [pageNum, setPageNum] = useState(0);
 
-  const { loading, error, data, refetch } = useQuery(GQL_CAMPAIGNS_list(), {
+  const { loading, error, data } = useQuery(GQL_WITHDRAWALS_by_campaignid(), {
     variables: {
       limit: pageSize,
       offset: pageNum * pageSize,
+      // all lowercase campaignid means the campaign's "id" property, not "campaignId"
+      campaignid: campaign.id,
     },
     pollInterval: 0,
   });
 
   useEffect(() => {
-    if (error !== undefined && error !== null) console.log("GQL_FUNDRUNS_For_Display Query Error: ", error);
+    if (error !== undefined && error !== null) console.log("GQL_WITHDRAWALS_by_campaignid Query Error: ", error);
   }, [error]);
 
   if (loading) {
@@ -48,39 +65,38 @@ export const CampaignsList = () => {
     );
   } else {
     // console.log("data: ", data);
-    const campaignsList = data.campaigns;
+    const withdrawalsList = data.withdrawals;
+    // console.log("withdrawalsList", withdrawalsList);
     return (
       <>
-        {campaignsList?.map((campaign: Campaign) => (
-          <div
-            key={campaign.campaignId.toString()}
-            className="flex flex-col gap-2 p-2 m-4 border shadow-xl border-base-300 bg-base-200 sm:rounded-lg"
-          >
-            <h1 className="font-bold text-xl">
-              <Link href={`/campaigns/${campaign.campaignId}`}>{campaign.title}</Link>
-            </h1>
-            <CampaignDisplay
-              refetch={refetch}
-              follows={data.follows}
-              campaignId={Number(campaign.campaignId)}
-              owner={campaign.owner}
-              title={campaign.title}
-              claim={campaign.claim}
-              description={campaign.description}
-              amountCollected={campaign.amountCollected}
-              amountWithdrawn={campaign.amountWithdrawn}
-            />
-            <div className="flex justify-right">
-              <div style={{ textAlign: "right", width: "100%" }}>
-                <Link href={`/campaigns/${campaign.campaignId}`} passHref className="btn btn-primary">
-                  <div className="tooltip tooltip-primary" data-tip="donate...">
-                    View Campaign
-                  </div>
-                </Link>
-              </div>
-            </div>
-          </div>
-        ))}
+        <div className="overflow-x-auto">
+          <table className="table table-zebra">
+            {/* head */}
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Campaign</th>
+                <th>Withdrawer</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {withdrawalsList?.map((withdrawal: Withdrawal) => {
+                // console.log("withdrawal", withdrawal)
+                return (
+                  <tr key={withdrawal.id} className="hover">
+                    <td>{new Date(withdrawal.createdAt * 1000).toLocaleString()}</td>
+                    <td className="font-bold">{withdrawal.campaign.title}</td>
+                    <td>
+                      <Address disableAddressLink={true} address={withdrawal.withdrawer.id} />
+                    </td>
+                    <td>{formatEther(withdrawal.amount)} Ether</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
         <div className="flex justify-center gap-3 mb-3">
           <span className="my-auto text-lg">Page {pageNum + 1}</span>
           <select

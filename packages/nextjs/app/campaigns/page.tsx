@@ -13,7 +13,6 @@ export default function BrowseCampaigns(): React.ReactNode {
             Back
           </button>
         </div> */}
-
         <h1 className="font-bold text-primary-content">Campaigns</h1>
         <CampaignsList />
       </div>

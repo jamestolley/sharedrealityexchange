@@ -1,9 +1,9 @@
-import Link from "next/link";
-// import { FollowToggle } from "../_components/social/FollowToggle";
+import { FollowToggle } from "../_components/social/FollowToggle";
 import { formatEther } from "viem";
 import { useAccount } from "wagmi";
 import { EditableTextArea, EditableTextField } from "~~/components/EditableText";
 import getErrorMessage from "~~/components/GetErrorMessage";
+import { Address } from "~~/components/scaffold-eth";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -16,6 +16,10 @@ interface CampaignDisplayProps {
   description: string;
   amountCollected: bigint;
   amountWithdrawn: bigint;
+  follows: {
+    user: string;
+    createdAt: number;
+  }[];
 }
 
 export const CampaignDisplay = (campaign: CampaignDisplayProps) => {
@@ -30,14 +34,7 @@ export const CampaignDisplay = (campaign: CampaignDisplayProps) => {
       return;
     }
 
-    //  we are not already pending an update
-    // if (isPending) {
-    //   return;
-    // }
-    // actually, it doesn't matter if there is an update pending.
-    // We can do two at the same time
-
-    // if they are not the owner...
+    // if they are the owner...
     if (!userIsOwner) {
       notification.error("You are not authorized to make changes to this campaign.", {
         position: "top-right",
@@ -66,7 +63,7 @@ export const CampaignDisplay = (campaign: CampaignDisplayProps) => {
         break;
     }
 
-    const args: readonly [number, string] = [campaign.campaignId, field == "owner" ? campaign.owner : text.trim()];
+    const args: readonly [number, string] = [campaign.campaignId, text.trim()];
 
     try {
       await writeContractAsync(
@@ -89,20 +86,15 @@ export const CampaignDisplay = (campaign: CampaignDisplayProps) => {
     }
   };
 
+  // console.log("c.follows", campaign.follows)
+
   return (
     <div>
-      <div className="flex justify-between">
-        <Link href={`/social-management/${campaign.campaignId}`} passHref className="btn btn-primary btn-sm">
-          Manage Social Page
-        </Link>
-        <Link href={`/conversation/${campaign.campaignId}`} passHref className="btn btn-primary btn-sm">
-          View Conversation
-        </Link>
-        {/* <FollowToggle campaignId={campaign.campaignId} /> */}
+      <div style={{ textAlign: "right", marginRight: 8 }}>
+        <FollowToggle campaignId={campaign?.campaignId} follows={campaign.follows} />
       </div>
-
       <label className="text-lg font-bold underline">Owner</label>
-      <p className="mt-0 mb-1 text-xl">
+      <div className="mt-0 mb-1 text-xl">
         {userIsOwner ? (
           <EditableTextField
             onUpdate={(text: string) => onFieldUpdate("owner", text)}
@@ -110,15 +102,15 @@ export const CampaignDisplay = (campaign: CampaignDisplayProps) => {
             className="w-full"
           />
         ) : (
-          campaign.owner
+          <Address size="sm" disableAddressLink={true} address={campaign.owner} />
         )}
-      </p>
+      </div>
 
       {/* <label className="text-lg font-bold underline">Title</label>
       <p className="mt-0 mb-1 text-xl">{userIsOwner ? <EditableTextField onUpdate={(text: string) => onFieldUpdate('title', text)} initialText={campaign.title} className="w-full" /> : campaign.title}</p> */}
 
       <label className="text-lg font-bold underline">Claim</label>
-      <p className="mt-0 mb-1 text-xl">
+      <div className="mt-0 mb-1 text-xl">
         {userIsOwner ? (
           <EditableTextField
             onUpdate={(text: string) => onFieldUpdate("claim", text)}
@@ -128,10 +120,10 @@ export const CampaignDisplay = (campaign: CampaignDisplayProps) => {
         ) : (
           campaign.claim
         )}
-      </p>
+      </div>
 
       <label className="text-lg font-bold underline">Description</label>
-      <p className="mt-0 mb-1 text-xl">
+      <div className="mt-0 mb-1 text-xl">
         {userIsOwner ? (
           <EditableTextArea
             onUpdate={(text: string) => onFieldUpdate("description", text)}
@@ -141,7 +133,7 @@ export const CampaignDisplay = (campaign: CampaignDisplayProps) => {
         ) : (
           campaign.description
         )}
-      </p>
+      </div>
 
       <div className="justify-between mt-5 lg:mt-0 lg:px-4 lg:flex">
         <div className="flex flex-col">

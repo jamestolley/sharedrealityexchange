@@ -4,21 +4,24 @@ import { notification } from "~~/utils/scaffold-eth";
 
 interface UnfollowButtonProps {
   campaignId: number;
+  setFollowing: (following: boolean) => void;
 }
 
-export const UnfollowButton = ({ campaignId }: UnfollowButtonProps) => {
-  const { writeContractAsync } = useScaffoldWriteContract("SharedRealityExchange");
+export const UnfollowButton = ({ campaignId, setFollowing }: UnfollowButtonProps) => {
+  const { writeContractAsync, isPending } = useScaffoldWriteContract("SharedRealityExchange");
 
   const handleClick = async () => {
     try {
       await writeContractAsync(
         {
-          functionName: "donateToCampaign", // "unfollow",
+          functionName: "unfollow",
           args: [campaignId],
         },
         {
           onBlockConfirmation: txnReceipt => {
             console.log("📦 Transaction blockHash", txnReceipt);
+            setFollowing(false);
+            notification.success("You have unfollowed this campaign.", { position: "top-right", duration: 6000 });
           },
         },
       );
@@ -30,7 +33,7 @@ export const UnfollowButton = ({ campaignId }: UnfollowButtonProps) => {
 
   return (
     <button className="btn btn-primary btn-sm" onClick={handleClick} type="button">
-      Unfollow
+      {isPending ? <span className="loading loading-spinner loading-sm"></span> : "Unfollow"}
     </button>
   );
 };

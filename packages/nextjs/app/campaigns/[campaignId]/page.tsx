@@ -1,10 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { CampaignDisplay } from "../_components/CampaignDisplay";
 import { CampaignDonate } from "../_components/CampaignDonate";
+import { CampaignsDonationsList } from "../_components/CampaignDonations";
+import { CampaignsFollowsList } from "../_components/CampaignFollows";
 import { CampaignWithdraw } from "../_components/CampaignWithdraw";
+import { CampaignsWithdrawalsList } from "../_components/CampaignWithdrawals";
 import { GQL_CAMPAIGN_by_campaignId } from "../_helpers/Queries";
 import { useQuery } from "@apollo/client";
 import { NextPage } from "next";
@@ -16,6 +18,7 @@ import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { notification } from "~~/utils/scaffold-eth";
 
 type CampaignType = {
+  id: string;
   campaignId: number;
   owner: string;
   title: string;
@@ -28,7 +31,6 @@ type CampaignType = {
 const CampaignDetail: NextPage = () => {
   const router = useRouter();
   const { campaignId } = useParams<{ campaignId: string }>();
-  // const [showingPosts, setShowingPosts] = useState(true);
 
   const { writeContractAsync } = useScaffoldWriteContract("SharedRealityExchange");
 
@@ -39,6 +41,10 @@ const CampaignDetail: NextPage = () => {
     pollInterval: 0,
   });
 
+  // if (data) {
+  //   console.log("data!!", data);
+  // }
+
   if (isNaN(parseInt(campaignId))) {
     return notFound();
   }
@@ -48,6 +54,7 @@ const CampaignDetail: NextPage = () => {
   }
 
   let campaign: CampaignType = {
+    id: "0x0",
     campaignId: -1,
     owner: "",
     title: "",
@@ -155,7 +162,7 @@ const CampaignDetail: NextPage = () => {
     return (
       <>
         {data && data.length && campaign && <MetaHeader title={campaign.title} />}
-        <div className="flex flex-col w-full p-4 mx-auto shadow-xl sm:my-auto bg-secondary sm:p-7 sm:rounded-lg sm:w-4/5 lg:w-4/5">
+        <div className="flex flex-col w-full p-4 mx-auto shadow-xl mt-8 bg-secondary sm:p-7 sm:rounded-lg sm:w-4/5 lg:w-4/5">
           <div className="flex justify-center mb-5 text-3xl w-full">
             {userIsOwner ? (
               <EditableTextArea
@@ -167,34 +174,50 @@ const CampaignDetail: NextPage = () => {
               campaign.title
             )}
           </div>
-          <div className="flex items-center justify-center">
-            <div className="flex flex-col w-3/5 gap-2 p-2 m-4 border shadow-xl border-base-300 bg-base-200 sm:rounded-lg">
-              <div>
-                <CampaignDisplay
-                  refetch={refetch}
-                  campaignId={campaign.campaignId}
-                  owner={campaign.owner}
-                  title={campaign.title}
-                  claim={campaign.claim}
-                  description={campaign.description}
-                  amountCollected={campaign.amountCollected}
-                  amountWithdrawn={campaign.amountWithdrawn}
-                />
-
-                <CampaignDonate refetch={refetch} campaignId={campaign.campaignId} />
-                <CampaignWithdraw refetch={refetch} campaignId={campaign.campaignId} />
-
-                <div className="flex flex-col justify-center gap-8 pt-6 mt-8 mb-5 border-t-4 sm:flex-row sm:flex-wrap">
-                  <Link href={`/crowdfund/vaults/${campaignId}`} passHref className="px-12 btn btn-primary">
-                    <div className="tooltip tooltip-primary" data-tip="View Proposals in the Vault">
-                      View Vault
-                    </div>
-                  </Link>
+          <div role="tablist" className="tabs tabs-lifted">
+            <input type="radio" name="campaign_tabs" role="tab" className="tab" aria-label="Overview" defaultChecked />
+            <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
+              <div className="flex items-center justify-center">
+                <div className="flex flex-col w-full gap-2 p-2 m-4 border shadow-xl border-base-300 bg-base-200 sm:rounded-lg">
+                  <div>
+                    <CampaignDisplay
+                      refetch={refetch}
+                      campaignId={campaign.campaignId}
+                      owner={campaign.owner}
+                      title={campaign.title}
+                      claim={campaign.claim}
+                      description={campaign.description}
+                      amountCollected={campaign.amountCollected}
+                      amountWithdrawn={campaign.amountWithdrawn}
+                      follows={data.follows}
+                    />
+                    <CampaignDonate refetch={refetch} campaignId={campaign.campaignId} />
+                    {userIsOwner && <CampaignWithdraw refetch={refetch} campaignId={campaign.campaignId} />}
+                  </div>
                 </div>
               </div>
             </div>
+            <input type="radio" name="campaign_tabs" role="tab" className="tab" aria-label="Conversation" />
+            <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
+              Conversation
+            </div>
+            <input type="radio" name="campaign_tabs" role="tab" className="tab" aria-label="Updates" />
+            <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
+              Updates
+            </div>
+            <input type="radio" name="campaign_tabs" role="tab" className="tab" aria-label="Donations" />
+            <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
+              <CampaignsDonationsList campaign={campaign} />
+            </div>
+            <input type="radio" name="campaign_tabs" role="tab" className="tab" aria-label="Withdrawals" />
+            <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
+              <CampaignsWithdrawalsList campaign={campaign} />
+            </div>
+            <input type="radio" name="campaign_tabs" role="tab" className="tab" aria-label="Followers" />
+            <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
+              <CampaignsFollowsList campaign={campaign} />
+            </div>
           </div>
-
           {/* <div className="flex justify-center mb-6 mt-14">
             <button
               className={showingPosts ? "btn btn-accent rounded-none" : "btn btn-primary rounded-none"}

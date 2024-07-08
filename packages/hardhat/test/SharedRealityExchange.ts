@@ -180,14 +180,18 @@ describe("SharedRealityExchange", function () {
       });
     });
 
-    // describe("Ownership change", function () {
-    //   it("Should emit an OwnershipTransferred event", async function () {
-    //     await expect(await sharedRealityExchange.transferOwnership(newOwner.address))
-    //       .to.emit(sharedRealityExchange, "OwnershipTransferred")
-    //       .withArgs(deployer.address, newOwner.address);
+    describe("Following and unfollowing", function () {
+      it("Should be able to follow", async function () {
+        await expect(await sharedRealityExchange.follow(0))
+          .to.emit(sharedRealityExchange, "Follow")
+          .withArgs(0, deployer.address);
+      });
 
-    //     expect(await sharedRealityExchange.owner()).to.equal(newOwner.address);
-    //   });
-    // });
+      it("Should be able to unfollow", async function () {
+        await expect(await sharedRealityExchange.unfollow(0))
+          .to.emit(sharedRealityExchange, "Unfollow")
+          .withArgs(0, deployer.address);
+      });
+    });
   });
 });

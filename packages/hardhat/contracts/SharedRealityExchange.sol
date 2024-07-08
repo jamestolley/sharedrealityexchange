@@ -71,6 +71,16 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		uint256 amount
 	);
 
+	event Follow(
+		uint32 campaignId,
+		address user
+	);
+
+	event Unfollow(
+		uint32 campaignId,
+		address user
+	);
+
 	constructor() Ownable() {}
 
 	function createCampaign(
@@ -212,4 +222,13 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		// record the withdrawl
 		emit Withdrawal(_campaignId, msg.sender, _amountRequested);
 	}
+
+	function follow(uint32 _campaignId) external {
+		emit Follow(_campaignId, msg.sender);
+	}
+
+	function unfollow(uint32 _campaignId) external {
+		emit Unfollow(_campaignId, msg.sender);
+	}
+
 }
