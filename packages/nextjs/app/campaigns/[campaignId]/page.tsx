@@ -6,6 +6,7 @@ import { CampaignDisplay } from "../_components/CampaignDisplay";
 import { CampaignDonate } from "../_components/CampaignDonate";
 import { CampaignsDonationsList } from "../_components/CampaignDonations";
 import { CampaignsFollowsList } from "../_components/CampaignFollows";
+import { CampaignsUpdatesList } from "../_components/CampaignUpdates";
 import { CampaignWithdraw } from "../_components/CampaignWithdraw";
 import { CampaignsWithdrawalsList } from "../_components/CampaignWithdrawals";
 import { GQL_CAMPAIGN_by_campaignId } from "../_helpers/Queries";
@@ -42,7 +43,7 @@ const CampaignDetail: NextPage = () => {
     if (getTab != tabIndex) {
       router.replace(`?tab=${tabIndex}`);
     }
-  }, [tabIndex]);
+  }, [router, searchParams, tabIndex]);
 
   const { writeContractAsync } = useScaffoldWriteContract("SharedRealityExchange");
 
@@ -239,7 +240,7 @@ const CampaignDetail: NextPage = () => {
               onClick={() => setTabIndex(2)}
             />
             <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
-              Updates
+              <CampaignsUpdatesList campaign={campaign} refetch={refetch} />
             </div>
             <input
               type="radio"

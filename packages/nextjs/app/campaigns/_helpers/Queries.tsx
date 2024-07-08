@@ -47,25 +47,21 @@ export const GQL_CAMPAIGNS_list = () => {
 
 // fetch the Campaign's "Social Media Page" list-of-posts on "/campaigns/{campaignId}"
 // returns latest-first
-export const GQL_SOCIAL_POSTS_for_display = () => {
+export const GQL_CAMPAIGNUPDATES_by_campaignId = (campaignId: number) => {
   return gql`
-    query ($limit: Int!, $offset: Int!, $campaignId: Int!, $userWalletAddress: String) {
-      socialPosts(
-        where: { campaignId: $campaignId }
-        orderBy: socialProposalId
+    query ($limit: Int!, $offset: Int!) {
+      campaignUpdates(
+        where: { campaign_:{ campaignId: ${campaignId} } }
+        orderBy: createdAt
         orderDirection: desc
         first: $limit
         skip: $offset
       ) {
         id
-        postText
-        proposedBy
-        campaignId
-        campaignTitle
-        likeCount
-        likes(where: { userWhoLiked: $userWalletAddress }) {
-          id
-        }
+        author
+        title
+        content
+        createdAt
       }
     }
   `;
@@ -117,7 +113,7 @@ export const GQL_EXPLORE_POSTS_by_who_you_follow = () => {
   `;
 };
 
-// fetch a single Social Media Post
+// fetch a single Post
 // used in /post/[postId].tsx
 export const GQL_SOCIAL_POST_for_display = () => {
   return gql`
