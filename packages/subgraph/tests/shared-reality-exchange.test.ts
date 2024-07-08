@@ -9,10 +9,11 @@ import {
   CampaignOwnerUpdated as CampaignOwnerUpdatedEvent,
   CampaignTitleUpdated as CampaignTitleUpdatedEvent,
   CampaignClaimUpdated as CampaignClaimUpdatedEvent,
-  CampaignDescriptionUpdated as CampaignDescriptionUpdatedEvent
+  CampaignDescriptionUpdated as CampaignDescriptionUpdatedEvent,
+  Follow as FollowEvent,
+  Unfollow as UnfollowEvent,
 } from "../generated/SharedRealityExchange/SharedRealityExchange";
 import {
-  createCampaignId,
   handleCampaignCreated,
   handleDonation,
   handleWithdrawal,
@@ -20,7 +21,9 @@ import {
   handleUpdateCampaignTitle,
   handleUpdateCampaignClaim,
   handleUpdateCampaignDescription,
-  getCampaignId
+  getCampaignId,
+  handleFollow,
+  handleUnfollow
 } from "../src/mapping";
 
 /**
@@ -34,11 +37,14 @@ describe("Shared Reality Exchange", () => {
     let newCampaignEvent = createCampaignEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "title", "claim", "description")
     handleCampaignCreated(newCampaignEvent)
 
-    let newDonationEvent = createDonationEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", BigInt.fromU32(1000))
+    let newDonationEvent = createDonationEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", BigInt.fromU32(1000), "This is the donation comment")
     handleDonation(newDonationEvent)
 
-    let newWithdrawalEvent = createWithdrawalEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", BigInt.fromU32(100))
+    let newWithdrawalEvent = createWithdrawalEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", BigInt.fromU32(100), "This is the withdrawal comment")
     handleWithdrawal(newWithdrawalEvent)
+
+    let newFollowEvent = createFollowEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045")
+    handleFollow(newFollowEvent)
 
     // let newTransferEvent = createTransferEvent("0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266")
     // handleOwnershipTransferred(newTransferEvent, '0x03')
@@ -86,6 +92,7 @@ describe("Shared Reality Exchange", () => {
       assert.fieldEquals("Donation", donation.id, "campaign", campaignId);
       assert.fieldEquals("Donation", donation.id, "donor", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
       assert.fieldEquals("Donation", donation.id, "amount", BigInt.fromI32(1000).toString());
+      assert.fieldEquals("Donation", donation.id, "comment", "This is the donation comment");
     }
 
     assert.entityCount("Donation", 1);
@@ -111,9 +118,56 @@ describe("Shared Reality Exchange", () => {
       assert.fieldEquals("Withdrawal", withdrawal.id, "campaign", campaignId);
       assert.fieldEquals("Withdrawal", withdrawal.id, "withdrawer", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
       assert.fieldEquals("Withdrawal", withdrawal.id, "amount", "100");
+      assert.fieldEquals("Withdrawal", withdrawal.id, "comment", "This is the withdrawal comment");
     }
 
     assert.entityCount("Withdrawal", 1);
+  });
+
+  test("Follow", () => {
+
+    let campaignId = getCampaignId(0);
+
+    let campaign = Campaign.load(campaignId);
+    assert.assertNotNull(
+        campaign,
+        "Loaded Campaign should not be null"
+    );
+
+    let follows = campaign!.follows.load();
+    let follow = follows[0];
+    assert.assertNotNull(
+      follow,
+      "Loaded Follow should not be null"
+    );
+    if (follow) {
+      assert.fieldEquals("Follow", follow.id, "campaign", campaignId);
+      assert.fieldEquals("Follow", follow.id, "user", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+    }
+
+    assert.entityCount("Follow", 1);
+  });
+
+  test("Unfollow", () => {
+
+    let newUnfollowEvent = createUnfollowEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045")
+    handleUnfollow(newUnfollowEvent)
+
+    let campaignId = getCampaignId(0);
+
+    let campaign = Campaign.load(campaignId);
+    assert.assertNotNull(
+        campaign,
+        "Loaded Campaign should not be null"
+    );
+
+    let follows = campaign!.follows.load();
+    assert.equals(
+      ethereum.Value.fromI32(follows.length),
+      ethereum.Value.fromI32(0)
+    );
+
+    assert.entityCount("Follow", 0);
   });
 
   test("Can update a campaign", () => {
@@ -171,7 +225,7 @@ export function createCampaignEvent(campaignId: u32, owner: string, title: strin
 }
 
 // @ts-ignore
-export function createDonationEvent(campaignId: u32, donor: string, amount: BigInt): DonationEvent {
+export function createDonationEvent(campaignId: u32, donor: string, amount: BigInt, comment: string): DonationEvent {
   // @ts-ignore
   let donationEvent = changetype<DonationEvent>(newMockEvent())
   donationEvent.parameters = new Array()
@@ -180,16 +234,18 @@ export function createDonationEvent(campaignId: u32, donor: string, amount: BigI
   let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
   let donorParam = new ethereum.EventParam("donor", ethereum.Value.fromAddress(Address.fromString(donor)))
   let amountParam = new ethereum.EventParam("amount", ethereum.Value.fromUnsignedBigInt(amount))
+  let commentParam = new ethereum.EventParam("comment", ethereum.Value.fromString(comment))
 
   donationEvent.parameters.push(campaignIdParam)
   donationEvent.parameters.push(donorParam)
   donationEvent.parameters.push(amountParam)
+  donationEvent.parameters.push(commentParam)
 
   return donationEvent
 }
 
 // @ts-ignore
-export function createWithdrawalEvent(campaignId: u32, withdrawer: string, amount: BigInt): WithdrawalEvent {
+export function createWithdrawalEvent(campaignId: u32, withdrawer: string, amount: BigInt, comment: string): WithdrawalEvent {
   // @ts-ignore
   let withdrawalEvent = changetype<WithdrawalEvent>(newMockEvent())
   withdrawalEvent.parameters = new Array()
@@ -198,12 +254,46 @@ export function createWithdrawalEvent(campaignId: u32, withdrawer: string, amoun
   let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
   let withdrawerParam = new ethereum.EventParam("withdrawer", ethereum.Value.fromAddress(Address.fromString(withdrawer)))
   let amountParam = new ethereum.EventParam("amount", ethereum.Value.fromUnsignedBigInt(amount))
+  let commentParam = new ethereum.EventParam("comment", ethereum.Value.fromString(comment))
 
   withdrawalEvent.parameters.push(campaignIdParam)
   withdrawalEvent.parameters.push(withdrawerParam)
   withdrawalEvent.parameters.push(amountParam)
+  withdrawalEvent.parameters.push(commentParam)
 
   return withdrawalEvent
+}
+
+// @ts-ignore
+export function createFollowEvent(campaignId: u32, user: string): FollowEvent {
+  // @ts-ignore
+  let followEvent = changetype<FollowEvent>(newMockEvent())
+  followEvent.parameters = new Array()
+
+  // let theCampaignId = getCampaignId(campaignId)
+  let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
+  let userParam = new ethereum.EventParam("user", ethereum.Value.fromAddress(Address.fromString(user)))
+
+  followEvent.parameters.push(campaignIdParam)
+  followEvent.parameters.push(userParam)
+
+  return followEvent
+}
+
+// @ts-ignore
+export function createUnfollowEvent(campaignId: u32, user: string): UnfollowEvent {
+  // @ts-ignore
+  let unfollowEvent = changetype<UnfollowEvent>(newMockEvent())
+  unfollowEvent.parameters = new Array()
+
+  // let theCampaignId = getCampaignId(campaignId)
+  let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
+  let userParam = new ethereum.EventParam("user", ethereum.Value.fromAddress(Address.fromString(user)))
+
+  unfollowEvent.parameters.push(campaignIdParam)
+  unfollowEvent.parameters.push(userParam)
+
+  return unfollowEvent
 }
 
 // @ts-ignore

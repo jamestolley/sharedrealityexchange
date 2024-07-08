@@ -118,6 +118,7 @@ export function handleDonation(event: DonationEvent): void {
     campaign: campaignId,
     donor: event.params.donor.toHexString(),
     amount: event.params.amount,
+    comment: event.params.comment,
     createdAt: event.block.timestamp,
   });
 }
@@ -154,6 +155,7 @@ export function handleWithdrawal(event: WithdrawalEvent): void {
     campaign: campaignId,
     withdrawer: event.params.withdrawer.toHexString(),
     amount: event.params.amount,
+    comment: event.params.comment,
     createdAt: event.block.timestamp,
   });
 }

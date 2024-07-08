@@ -35,6 +35,7 @@ type Donation @entity(immutable: true) {
   id: ID!
   campaign: Campaign! # uint32
   donor: Donor! # address
+  comment: String!
   amount: BigInt! # uint256
   createdAt: BigInt!
 }
@@ -51,6 +52,7 @@ type Withdrawal @entity(immutable: true) {
   campaign: Campaign! # uint32
   withdrawer: Withdrawer! # address
   amount: BigInt! # uint256
+  comment: String!
   createdAt: BigInt!
 }
 

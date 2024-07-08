@@ -49,6 +49,12 @@ entitySettings:
     entityId:
       - name: id
         type: Bytes
+  Follow:
+    useDefault: []
+    setters: []
+    entityId:
+      - name: id
+        type: Bytes
 #   OwnershipTransferred:
 #     useDefault: []
 #     setters: []
