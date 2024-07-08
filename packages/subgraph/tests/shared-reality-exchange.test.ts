@@ -6,6 +6,7 @@ import {
   CampaignCreated as CampaignCreatedEvent,
   Donation as DonationEvent,
   Withdrawal as WithdrawalEvent,
+  CampaignUpdate as CampaignUpdateEvent,
   CampaignOwnerUpdated as CampaignOwnerUpdatedEvent,
   CampaignTitleUpdated as CampaignTitleUpdatedEvent,
   CampaignClaimUpdated as CampaignClaimUpdatedEvent,
@@ -23,7 +24,8 @@ import {
   handleUpdateCampaignDescription,
   getCampaignId,
   handleFollow,
-  handleUnfollow
+  handleUnfollow,
+  handleCampaignUpdate
 } from "../src/mapping";
 
 /**
@@ -45,6 +47,9 @@ describe("Shared Reality Exchange", () => {
 
     let newFollowEvent = createFollowEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045")
     handleFollow(newFollowEvent)
+
+    let newCampaignUpdateEvent = createCampaignUpdateEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "title", "content")
+    handleCampaignUpdate(newCampaignUpdateEvent)
 
     // let newTransferEvent = createTransferEvent("0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266")
     // handleOwnershipTransferred(newTransferEvent, '0x03')
@@ -122,6 +127,32 @@ describe("Shared Reality Exchange", () => {
     }
 
     assert.entityCount("Withdrawal", 1);
+  });
+
+  test("CampaignUpdate", () => {
+
+    let campaignId = getCampaignId(0);
+
+    let campaign = Campaign.load(campaignId);
+    assert.assertNotNull(
+        campaign,
+        "Loaded Campaign should not be null"
+    );
+
+    let updates = campaign!.updates.load();
+    let update = updates[0];
+    assert.assertNotNull(
+      update,
+      "Loaded CampaignUpdate should not be null"
+    );
+    if (update) {
+      assert.fieldEquals("CampaignUpdate", update.id, "campaign", campaignId);
+      assert.fieldEquals("CampaignUpdate", update.id, "author", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+      assert.fieldEquals("CampaignUpdate", update.id, "title", "title");
+      assert.fieldEquals("CampaignUpdate", update.id, "content", "content");
+    }
+
+    assert.entityCount("CampaignUpdate", 1);
   });
 
   test("Follow", () => {
@@ -294,6 +325,26 @@ export function createUnfollowEvent(campaignId: u32, user: string): UnfollowEven
   unfollowEvent.parameters.push(userParam)
 
   return unfollowEvent
+}
+
+// @ts-ignore
+export function createCampaignUpdateEvent(campaignId: u32, author: string, title: string, content: string): CampaignUpdateEvent {
+  // @ts-ignore
+  let campaignUpdateEvent = changetype<CampaignUpdateEvent>(newMockEvent())
+  campaignUpdateEvent.parameters = new Array()
+
+  // let theCampaignId = getCampaignId(campaignId)
+  let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
+  let authorParam = new ethereum.EventParam("author", ethereum.Value.fromAddress(Address.fromString(author)))
+  let titleParam = new ethereum.EventParam("title", ethereum.Value.fromString(title))
+  let contentParam = new ethereum.EventParam("content", ethereum.Value.fromString(content))
+
+  campaignUpdateEvent.parameters.push(campaignIdParam)
+  campaignUpdateEvent.parameters.push(authorParam)
+  campaignUpdateEvent.parameters.push(titleParam)
+  campaignUpdateEvent.parameters.push(contentParam)
+
+  return campaignUpdateEvent
 }
 
 // @ts-ignore

@@ -7,6 +7,7 @@ import {
   CampaignCreated as CampaignCreatedEvent,
   Donation as DonationEvent,
   Withdrawal as WithdrawalEvent,
+  CampaignUpdate as CampaignUpdateEvent,
   CampaignOwnerUpdated as CampaignOwnerUpdatedEvent,
   CampaignTitleUpdated as CampaignTitleUpdatedEvent,
   CampaignClaimUpdated as CampaignClaimUpdatedEvent,
@@ -19,14 +20,17 @@ import {
   generateCampaignId,
   generateDonorId,
   generateWithdrawerId,
+  generateDonationId,
+  generateWithdrawalId,
+  generateFollowId,
+  generateCampaignUpdateId,
   getOrInitializeDonor,
   getOrInitializeWithdrawer,
   createCampaign,
   getCampaign,
   createDonation,
-  generateDonationId,
-  generateWithdrawalId,
   createWithdrawal,
+  createCampaignUpdate,
   updateCampaignOwner,
   updateCampaignTitle,
   updateCampaignClaim,
@@ -34,7 +38,6 @@ import {
   getDonor,
   getWithdrawer,
   createFollow,
-  generateFollowId
 } from "../generated/UncrashableEntityHelpers"
 // } from "../generated/UncrashableEntityHelpers.edited"
 // import { tokenToString } from "typescript";
@@ -190,6 +193,26 @@ export function handleUnfollow(event: UnfollowEvent): void {
   let followId = generateFollowId(Bytes.fromHexString(campaignAndUserHexString));
 
   store.remove('Follow', followId);
+}
+
+export function handleCampaignUpdate(event: CampaignUpdateEvent): void {
+
+  // update the campaign's amountDonated
+  let campaignId = getCampaignId(event.params.campaignId.toI32());
+  let campaign = getCampaign(campaignId);
+
+  // create the CampaignUpdate
+  let hex_string = ensureEvenCharacterHexString(event.transaction.hash.toHex().concat(event.logIndex.toString()))
+  let updateId = generateCampaignUpdateId(Bytes.fromHexString(hex_string));
+
+  createCampaignUpdate(
+    updateId, {
+    campaign: campaignId,
+    author: Bytes.fromHexString(event.params.author.toHexString()),
+    title: event.params.title,
+    content: event.params.content,
+    createdAt: event.block.timestamp,
+  });
 }
 
 // export function handleOwnershipTransferred(event: OwnershipTransferredEvent): void {

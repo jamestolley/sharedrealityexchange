@@ -55,6 +55,12 @@ entitySettings:
     entityId:
       - name: id
         type: Bytes
+  CampaignUpdate:
+    useDefault: []
+    setters: []
+    entityId:
+      - name: id
+        type: Bytes
 #   OwnershipTransferred:
 #     useDefault: []
 #     setters: []
