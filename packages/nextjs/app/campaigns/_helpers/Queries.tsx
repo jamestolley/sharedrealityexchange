@@ -395,6 +395,7 @@ export const GQL_DONATIONS_by_campaignid = () => {
           id
         }
         amount
+        comment
         campaign {
           id
           campaignId
@@ -423,6 +424,7 @@ export const GQL_WITHDRAWALS_by_campaignid = () => {
           id
         }
         amount
+        comment
         campaign {
           id
           campaignId
@@ -461,7 +463,7 @@ export const GQL_FOLLOWS_by_campaignid = () => {
   `;
 };
 
-// fetch donations for a campaign
+// fetch donations for a campaign, via search string
 // queries page
 export const GQL_DONATIONS = (searchInput: string) => {
   if (searchInput.trim().length === 0)

@@ -29,6 +29,7 @@ type Withdrawal = {
   };
   campaign: Campaign;
   amount: bigint;
+  comment: string;
   createdAt: number;
 };
 
@@ -75,8 +76,8 @@ export const CampaignsWithdrawalsList = ({ campaign }: CampaignsWithdrawalsListP
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Campaign</th>
                 <th>Withdrawer</th>
+                <th>Comment</th>
                 <th>Amount</th>
               </tr>
             </thead>
@@ -86,10 +87,10 @@ export const CampaignsWithdrawalsList = ({ campaign }: CampaignsWithdrawalsListP
                 return (
                   <tr key={withdrawal.id} className="hover">
                     <td>{new Date(withdrawal.createdAt * 1000).toLocaleString()}</td>
-                    <td className="font-bold">{withdrawal.campaign.title}</td>
                     <td>
                       <Address disableAddressLink={true} address={withdrawal.withdrawer.id} />
                     </td>
+                    <td>{withdrawal.comment}</td>
                     <td>{formatEther(withdrawal.amount)} Ether</td>
                   </tr>
                 );

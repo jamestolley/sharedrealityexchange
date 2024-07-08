@@ -29,6 +29,7 @@ type Donation = {
   };
   campaign: Campaign;
   amount: bigint;
+  comment: string;
   createdAt: number;
 };
 
@@ -75,8 +76,8 @@ export const CampaignsDonationsList = ({ campaign }: CampaignsDonationsListProps
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Campaign</th>
                 <th>Donor</th>
+                <th>Comment</th>
                 <th>Amount</th>
               </tr>
             </thead>
@@ -86,10 +87,10 @@ export const CampaignsDonationsList = ({ campaign }: CampaignsDonationsListProps
                 return (
                   <tr key={donation.id} className="hover">
                     <td>{new Date(donation.createdAt * 1000).toLocaleString()}</td>
-                    <td className="font-bold">{donation.campaign.title}</td>
                     <td>
                       <Address disableAddressLink={true} address={donation.donor.id} />
                     </td>
+                    <td>{donation.comment}</td>
                     <td>{formatEther(donation.amount)} Ether</td>
                   </tr>
                 );

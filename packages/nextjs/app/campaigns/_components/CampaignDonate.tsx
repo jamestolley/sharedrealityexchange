@@ -1,6 +1,6 @@
 import { useState } from "react";
 import getErrorMessage from "~~/components/GetErrorMessage";
-import { IntegerInput, IntegerVariant, isValidInteger } from "~~/components/scaffold-eth";
+import { InputBase, IntegerInput, IntegerVariant, isValidInteger } from "~~/components/scaffold-eth";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -11,6 +11,7 @@ interface CampaignProps {
 
 export const CampaignDonate = ({ refetch, campaignId }: CampaignProps) => {
   const [donationInput, setDonationInput] = useState("");
+  const [commentInput, setCommentInput] = useState("");
 
   const { writeContractAsync, isPending } = useScaffoldWriteContract("SharedRealityExchange");
 
@@ -31,7 +32,7 @@ export const CampaignDonate = ({ refetch, campaignId }: CampaignProps) => {
       await writeContractAsync(
         {
           functionName: "donateToCampaign",
-          args: [campaignId],
+          args: [campaignId, commentInput],
           value: BigInt(donationInput),
         },
         {
@@ -57,6 +58,7 @@ export const CampaignDonate = ({ refetch, campaignId }: CampaignProps) => {
           value={donationInput}
           onChange={handleBigIntChange}
         />
+        <InputBase placeholder="Optional comment, 256 chars max" value={commentInput} onChange={setCommentInput} />
         <button className="w-1/4 btn btn-primary" onClick={validateThenWrite} disabled={isPending}>
           {isPending ? <span className="loading loading-spinner loading-sm"></span> : <>DONATE</>}
         </button>

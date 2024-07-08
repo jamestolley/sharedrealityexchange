@@ -1,6 +1,6 @@
 import { useState } from "react";
 import getErrorMessage from "~~/components/GetErrorMessage";
-import { IntegerInput, IntegerVariant, isValidInteger } from "~~/components/scaffold-eth";
+import { InputBase, IntegerInput, IntegerVariant, isValidInteger } from "~~/components/scaffold-eth";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -11,6 +11,7 @@ interface CampaignProps {
 
 export const CampaignWithdraw = ({ refetch, campaignId }: CampaignProps) => {
   const [withdrawalInput, setWithdrawalInput] = useState("");
+  const [commentInput, setCommentInput] = useState("");
 
   const { writeContractAsync, isPending } = useScaffoldWriteContract("SharedRealityExchange");
 
@@ -31,7 +32,7 @@ export const CampaignWithdraw = ({ refetch, campaignId }: CampaignProps) => {
       await writeContractAsync(
         {
           functionName: "withdrawFromCampaign",
-          args: [campaignId, BigInt(withdrawalInput)],
+          args: [campaignId, BigInt(withdrawalInput), commentInput],
         },
         {
           onBlockConfirmation: txnReceipt => {
@@ -56,6 +57,7 @@ export const CampaignWithdraw = ({ refetch, campaignId }: CampaignProps) => {
           value={withdrawalInput}
           onChange={handleBigIntChange}
         />
+        <InputBase placeholder="Optional comment, 256 chars max" value={commentInput} onChange={setCommentInput} />
         <button className="w-1/4 btn btn-primary" onClick={validateThenWrite} disabled={isPending}>
           {isPending ? <span className="loading loading-spinner loading-sm"></span> : <>WITHDRAW</>}
         </button>
