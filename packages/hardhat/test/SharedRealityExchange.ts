@@ -3,6 +3,18 @@ import { ethers } from "hardhat";
 import { SharedRealityExchange } from "../typechain-types";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
+const IdeaType: {
+  Claim: 0;
+  Pro: 1;
+  Con: 2;
+  Part: 3;
+} = {
+  Claim: 0,
+  Pro: 1,
+  Con: 2,
+  Part: 3,
+};
+
 describe("SharedRealityExchange", function () {
   // We define a fixture to reuse the same setup in every test.
 
@@ -25,9 +37,16 @@ describe("SharedRealityExchange", function () {
       const title = "title";
       const claim = "claim";
 
-      await expect((campaignId = await sharedRealityExchange.createCampaign("title", "claim", "description")))
-        .to.emit(sharedRealityExchange, "CampaignCreated")
+      const result = expect((campaignId = await sharedRealityExchange.createCampaign("title", "claim", "description")));
+
+      result.to
+        .emit(sharedRealityExchange, "CampaignCreated")
         .withArgs(0, deployer.address, title, claim, "description");
+
+      result.to
+        .emit(sharedRealityExchange, "CreateIdea")
+        // campaignId, parentId, ideaType (claim == 0), claimText
+        .withArgs(0, "0x0000000000000000000000000000000000000000", 0, claim);
 
       expect(campaignId.value).to.equal(0);
 
@@ -108,6 +127,20 @@ describe("SharedRealityExchange", function () {
       expect(campaign[3]).to.equal(ethDonated);
       expect(campaign[4]).to.equal(ethWithdrawn);
     });
+
+    it("Should allow the creation of an idea", async function () {
+      const parentId = "0x0000000000000000000000000000000000000001";
+      const ideaType = IdeaType.Pro;
+      const text = "This is the test idea";
+
+      await expect(await sharedRealityExchange.createIdea(0, parentId, ideaType, text))
+        .to.emit(sharedRealityExchange, "CreateIdea")
+        // campaignId, parentId, ideaType (claim == 0), claimText
+        .withArgs(0, parentId, ideaType, text);
+    });
+
+    // Cannot test the updating or deleting of an idea because we cannot get the ideaId from the contract
+    // We can test this in the graph
 
     it("Should reject an update from a non-owner", async function () {
       const nonOwnerContract = sharedRealityExchange.connect(nonOwner);
@@ -202,7 +235,7 @@ describe("SharedRealityExchange", function () {
         .withArgs(0, "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9");
 
       const campaign = await sharedRealityExchange.campaigns(0);
-      console.log(campaign);
+      // console.log(campaign);
       // console.log([deployer, "title", "claim", ethDonated, ethWithdrawn])
       expect(campaign[0]).to.equal("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9");
       expect(campaign[1]).to.equal("new title");

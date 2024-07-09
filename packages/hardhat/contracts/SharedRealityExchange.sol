@@ -28,6 +28,42 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		mapping(uint256 => uint256) donationToCampaign; //mapping(fundRunId => donationAmount)
 	}
 
+	/**
+	 * @dev ConversationTree storage
+	 * adding an argument map to a fund run
+	 * aside from the below, each ConversationTree requires a treeRoot (an ideaId) and a mapping(bytes32 => Idea) public ideas;
+	 */
+	enum IdeaType {
+		Claim, // just for claims
+		Pro,
+		Con,
+		Part
+	}
+
+	// struct Idea {
+
+	// 	//
+	// 	// object tree data structure attributes first
+
+	// 	// the id of the parent idea
+	// 	bytes32 parentId;
+
+	// 	//  the position of this idea in the Parent's children list
+	// 	uint16 parentIndex;
+
+	// 	// unordered list of child ideas below this idea
+	// 	bytes32[] children;
+
+	// 	//
+	// 	// custom, application-specific node attributes below
+
+	// 	// Pro, Con, or Part: (0, 1, or 2)
+	// 	IdeaType ideaType;
+
+	// 	// text of the idea
+	// 	string text;
+	// }
+
 	Campaign[] public campaigns;
 	mapping(address => DonorHistory) public donations;
 	
@@ -89,6 +125,43 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		string title,
 		string content
 	);
+	
+    // if a parent idea exists, appends the child to the parent idea's children array
+    // then sets this entity's parentIndex
+	event CreateIdea(
+		uint32 campaignId,
+		bytes parentId,
+		IdeaType ideaType,
+		string text
+	);
+
+	event UpdateIdeaParent(
+		uint32 campaignId,
+		bytes ideaId,
+		bytes parentId
+	);
+    // edits the old parent and the new parent
+    // sets this parentIndex
+
+	// just edits the one entity in the graph database
+	event UpdateIdeaText(
+		uint32 campaignId,
+		bytes ideaId,
+		string text
+	);
+
+	// just edits the one entity in the graph database
+	event UpdateIdeaType(
+		uint32 campaignId,
+		bytes ideaId,
+		IdeaType ideaType
+	);
+    
+	// would fail if any children exist
+	event DeleteIdea(
+		uint32 campaignId,
+		bytes ideaId
+	);
 
 	constructor() Ownable() {}
 
@@ -121,6 +194,10 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		uint32 campaignId = uint32(campaigns.length - 1);
 
 		emit CampaignCreated(campaignId, msg.sender, _title, _claim, _description);
+
+		bytes memory parentId = "0x0000000000000000000000000000000000000000";
+
+		emit CreateIdea(campaignId, parentId, IdeaType.Claim, _claim);
 
 		return campaignId;
 	}
@@ -255,6 +332,77 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		require(msg.sender == campaign.owner, "Caller is not the current owner");
 
 		emit CampaignUpdate(_campaignId, campaign.owner, _title, _content);
+	}
+
+	function createIdea(uint32 _campaignId, bytes calldata _parentId, IdeaType _ideaType, string calldata _text) public {
+		
+		require(campaigns.length > _campaignId, "Campaign not found");
+
+		// this is not the claim, so it cannot be of IdeaType.Claim
+		require(_ideaType != IdeaType.Claim, "ideaType must be 1, 2, or 3");
+
+		// _text cannot be empty
+		bytes32 baseCompare = keccak256("");
+		bytes32 textCompare = keccak256(bytes(_text));
+		require(baseCompare != textCompare, "Idea text cannot be empty");
+
+		Campaign storage campaign = campaigns[_campaignId];
+
+		require(msg.sender == campaign.owner, "Caller is not the current owner");
+
+		emit CreateIdea(_campaignId, _parentId, _ideaType, _text);
+	}
+
+	function updateIdeaParent(uint32 _campaignId, bytes calldata _ideaId, bytes calldata _parentId) public {
+
+		require(campaigns.length > _campaignId, "Campaign not found");
+
+		Campaign storage campaign = campaigns[_campaignId];
+
+		require(msg.sender == campaign.owner, "Caller is not the current owner");
+
+		emit UpdateIdeaParent(_campaignId, _ideaId, _parentId);
+	}
+
+	function updateIdeaType(uint32 _campaignId, bytes calldata _ideaId, IdeaType _ideaType) public {
+
+		require(campaigns.length > _campaignId, "Campaign not found");
+
+		// this is not the claim, so it cannot be of IdeaType.Claim
+		require(_ideaType != IdeaType.Claim, "ideaType must be 1, 2, or 3");
+
+		Campaign storage campaign = campaigns[_campaignId];
+
+		require(msg.sender == campaign.owner, "Caller is not the current owner");
+
+		emit UpdateIdeaType(_campaignId, _ideaId, _ideaType);
+	}
+
+	function updateIdeaText(uint32 _campaignId, bytes calldata _ideaId, string calldata _text) public {
+
+		require(campaigns.length > _campaignId, "Campaign not found");
+
+		// _text cannot be empty
+		bytes32 baseCompare = keccak256("");
+		bytes32 textCompare = keccak256(bytes(_text));
+		require(baseCompare != textCompare, "Idea text cannot be empty");
+
+		Campaign storage campaign = campaigns[_campaignId];
+
+		require(msg.sender == campaign.owner, "Caller is not the current owner");
+
+		emit UpdateIdeaText(_campaignId, _ideaId, _text);
+	}
+
+	function deleteIdea(uint32 _campaignId, bytes calldata _ideaId) public {
+
+		require(campaigns.length > _campaignId, "Campaign not found");
+
+		Campaign storage campaign = campaigns[_campaignId];
+
+		require(msg.sender == campaign.owner, "Caller is not the current owner");
+
+		emit DeleteIdea(_campaignId, _ideaId);
 	}
 
 }
