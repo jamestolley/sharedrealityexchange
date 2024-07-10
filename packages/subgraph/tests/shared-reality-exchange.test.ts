@@ -1,7 +1,7 @@
 import { describe, test, assert, beforeAll, logStore, newMockEvent } from "matchstick-as";
-import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { Campaign, Donation, Withdrawal } from "../generated/schema";
-import { generateCampaignId, generateDonationId, generateWithdrawalId } from "../generated/UncrashableEntityHelpers";
+import { Address, BigInt, Bytes, ethereum, log } from "@graphprotocol/graph-ts";
+import { Campaign, Idea } from "../generated/schema";
+// import { generateCampaignId, generateDonationId, generateWithdrawalId } from "../generated/UncrashableEntityHelpers";
 import { 
   CampaignCreated as CampaignCreatedEvent,
   Donation as DonationEvent,
@@ -13,6 +13,11 @@ import {
   CampaignDescriptionUpdated as CampaignDescriptionUpdatedEvent,
   Follow as FollowEvent,
   Unfollow as UnfollowEvent,
+  CreateIdea as CreateIdeaEvent,
+  UpdateIdeaParent as UpdateIdeaParentEvent,
+  UpdateIdeaText as UpdateIdeaTextEvent,
+  UpdateIdeaType as UpdateIdeaTypeEvent,
+  DeleteIdea as DeleteIdeaEvent
 } from "../generated/SharedRealityExchange/SharedRealityExchange";
 import {
   handleCampaignCreated,
@@ -25,8 +30,29 @@ import {
   getCampaignId,
   handleFollow,
   handleUnfollow,
-  handleCampaignUpdate
+  handleCampaignUpdate,
+  handleCreateIdea,
+  handleUpdateIdeaText,
+  handleUpdateIdeaType,
+  handleUpdateIdeaParent
 } from "../src/mapping";
+
+//
+// these seemingly good lines of code are not working, so I'll hard-code the values...
+//
+// type IdeaTypeType = {
+//   Claim: 0;
+//   Pro: 1;
+//   Con: 2;
+//   Part: 3;
+// };
+
+// const IdeaType: IdeaTypeType = {
+//   "Claim": 0,
+//   "Pro": 1,
+//   "Con": 2,
+//   "Part": 3,
+// };
 
 /**
  * TODO: add tests for Donors and Withdrawers (including derived fields), and for the deterministic ids of Donations and Withdrawals
@@ -54,7 +80,7 @@ describe("Shared Reality Exchange", () => {
     // let newTransferEvent = createTransferEvent("0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266")
     // handleOwnershipTransferred(newTransferEvent, '0x03')
 
-    logStore();
+    // logStore();
   });
 
   test("Can create new campaign", () => {
@@ -153,6 +179,438 @@ describe("Shared Reality Exchange", () => {
     }
 
     assert.entityCount("CampaignUpdate", 1);
+  });
+
+  test("createIdea", () => {
+
+    let newIdeaEvent = createIdeaEvent(0, 0, "0x0000000000000000000000000000000000000000", 0, "idea text");
+    handleCreateIdea(newIdeaEvent);
+    
+    //
+    // test that the claim was stored properly
+    //
+    let campaignId = getCampaignId(0);
+
+    const campaign = Campaign.load(campaignId);
+    assert.assertNotNull(
+        campaign,
+        "Loaded Campaign should not be null"
+    );
+
+    let ideas = campaign!.ideas.load();
+
+    assert.equals(ethereum.Value.fromI32(1), ethereum.Value.fromI32(ideas.length));
+
+    let claim = ideas[0];
+    assert.assertNotNull(
+      claim,
+      "Loaded Idea (claim) should not be null"
+    );
+
+    if (claim) {
+
+      assert.fieldEquals("Idea", claim.id, "campaign", campaignId);
+      assert.fieldEquals("Idea", claim.id, "parentId", "0x0000000000000000000000000000000000000000");
+      assert.fieldEquals("Idea", claim.id, "parentIndex", "0");
+      assert.equals(ethereum.Value.fromI32(claim.children.length), ethereum.Value.fromI32(0));
+      assert.fieldEquals("Idea", claim.id, "ideaType", "0");
+      assert.fieldEquals("Idea", claim.id, "text", "idea text");
+
+      assert.entityCount("Idea", 1);
+
+    }
+    else {
+      assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+    }
+
+  });
+
+  test("updateIdea text and type", () => {
+
+    //
+    // test that the claim was stored properly
+    //
+    let campaignId = getCampaignId(0);
+
+    const campaign = Campaign.load(campaignId);
+    assert.assertNotNull(
+        campaign,
+        "Loaded Campaign should not be null"
+    );
+
+    let ideas = campaign!.ideas.load();
+
+    assert.equals(ethereum.Value.fromI32(1), ethereum.Value.fromI32(ideas.length));
+
+    let claim = ideas[0];
+    assert.assertNotNull(
+      claim,
+      "Loaded Idea (claim) should not be null"
+    );
+
+    if (claim) {
+      assert.fieldEquals("Idea", claim.id, "campaign", campaignId);
+      assert.fieldEquals("Idea", claim.id, "parentId", "0x0000000000000000000000000000000000000000");
+      assert.fieldEquals("Idea", claim.id, "parentIndex", "0");
+      assert.equals(ethereum.Value.fromI32(claim.children.length), ethereum.Value.fromI32(0));
+      assert.fieldEquals("Idea", claim.id, "ideaType", "0");
+      assert.fieldEquals("Idea", claim.id, "text", "idea text");
+
+      assert.entityCount("Idea", 1);
+
+      // logStore();
+  
+      // update the claim's text & type
+      const updateIdeaTextEvent = createUpdateIdeaTextEvent(0, claim.id, "updated idea text");
+      handleUpdateIdeaText(updateIdeaTextEvent);
+
+      const updateIdeaTypeEvent = createUpdateIdeaTypeEvent(0, claim.id, 2);
+      handleUpdateIdeaType(updateIdeaTypeEvent);
+
+      const updatedClaim = Idea.load(claim.id);
+      if (updatedClaim) {
+        assert.fieldEquals("Idea", updatedClaim.id, "parentId", "0x0000000000000000000000000000000000000000");
+        assert.fieldEquals("Idea", updatedClaim.id, "parentIndex", "0");
+        assert.equals(ethereum.Value.fromI32(updatedClaim.children.length), ethereum.Value.fromI32(0));
+        assert.fieldEquals("Idea", updatedClaim.id, "ideaType", "2");
+        assert.fieldEquals("Idea", updatedClaim.id, "text", "updated idea text");
+
+        // logStore();
+        
+      }
+      else {
+        assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+      }
+
+    }
+    else {
+      assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+    }
+
+  });
+
+  test("create child Idea", () => {
+
+    assert.entityCount("Idea", 1);
+
+    //
+    // test that the claim was stored properly
+    //
+    let campaignId = getCampaignId(0);
+
+    const campaign = Campaign.load(campaignId);
+    assert.assertNotNull(
+        campaign,
+        "Loaded Campaign should not be null"
+    );
+
+    let ideas = campaign!.ideas.load();
+
+    assert.equals(ethereum.Value.fromI32(1), ethereum.Value.fromI32(ideas.length));
+
+    let claim = ideas[0];
+    assert.assertNotNull(
+      claim,
+      "Loaded Idea (claim) should not be null"
+    );
+
+    if (claim) {
+    
+      let newIdeaEvent = createIdeaEvent(1, 0, claim.id, 1, "child idea text");
+      handleCreateIdea(newIdeaEvent);
+
+      assert.entityCount("Idea", 2);
+
+      // logStore();
+
+      const newCampaign = Campaign.load(campaignId);
+      assert.assertNotNull(
+          campaign,
+          "Loaded Campaign should not be null"
+      );
+  
+      let ideas = campaign!.ideas.load();
+  
+      assert.equals(ethereum.Value.fromI32(2), ethereum.Value.fromI32(ideas.length));
+  
+      const childIdea = ideas.filter(idea => idea.parentId != Bytes.fromHexString("0x0000000000000000000000000000000000000000"))[0];
+      const parentIdea = ideas.filter(idea => idea.parentId == Bytes.fromHexString("0x0000000000000000000000000000000000000000"))[0];
+      assert.assertNotNull(
+        childIdea,
+        "Loaded childIdea should not be null"
+      );
+      assert.assertNotNull(
+        parentIdea,
+        "Loaded parentIdea should not be null"
+      );
+
+      if (childIdea && parentIdea) {
+
+        assert.fieldEquals("Idea", parentIdea.id, "campaign", campaignId);
+        assert.fieldEquals("Idea", parentIdea.id, "parentId", "0x0000000000000000000000000000000000000000");
+        assert.fieldEquals("Idea", parentIdea.id, "parentIndex", "0");
+        assert.equals(ethereum.Value.fromI32(parentIdea.children.length), ethereum.Value.fromI32(1));
+        const parentChildId = parentIdea.children[0];
+        if (parentChildId) {
+          assert.equals(ethereum.Value.fromBytes(parentChildId), ethereum.Value.fromBytes(Bytes.fromHexString(childIdea.id)));
+        }
+        else {
+          assert.equals(ethereum.Value.fromBoolean(false), ethereum.Value.fromBoolean(true));
+        }
+        assert.fieldEquals("Idea", parentIdea.id, "ideaType", "2");
+        assert.fieldEquals("Idea", parentIdea.id, "text", "updated idea text");
+
+        assert.fieldEquals("Idea", childIdea.id, "campaign", campaignId);
+        assert.fieldEquals("Idea", childIdea.id, "parentId", parentIdea.id.toString());
+        assert.fieldEquals("Idea", childIdea.id, "parentIndex", "0");
+        assert.equals(ethereum.Value.fromI32(childIdea.children.length), ethereum.Value.fromI32(0));
+        assert.fieldEquals("Idea", childIdea.id, "ideaType", "1");
+        assert.fieldEquals("Idea", childIdea.id, "text", "child idea text");
+
+      }
+
+      // logStore();
+
+    }
+    else {
+      assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+    }
+
+  });
+
+  test("create grandchild Idea", () => {
+
+    assert.entityCount("Idea", 2);
+
+    //
+    // test that the claim was stored properly
+    //
+    let campaignId = getCampaignId(0);
+
+    const campaign = Campaign.load(campaignId);
+    assert.assertNotNull(
+        campaign,
+        "Loaded Campaign should not be null"
+    );
+
+    let ideas = campaign!.ideas.load();
+
+    assert.equals(ethereum.Value.fromI32(2), ethereum.Value.fromI32(ideas.length));
+
+    const claim = ideas.filter(idea => idea.parentId == Bytes.fromHexString("0x0000000000000000000000000000000000000000"))[0];
+    const claimId = Bytes.fromHexString(claim.id);
+    for (let i = 0; i < ideas.length; i++) {
+      if (typeof ideas[i] == 'object' && ideas[i].parentId == claimId) {
+        var childIdea = ideas[i];
+        break;
+      }
+    }
+    assert.assertNotNull(
+      claim,
+      "Loaded claim should not be null"
+    );
+    assert.assertNotNull(
+      childIdea,
+      "Loaded childIdea should not be null"
+    );
+
+    if (claim && childIdea) {
+    
+      let newIdeaEvent = createIdeaEvent(2, 0, childIdea.id, 3, "grandchild idea text");
+      handleCreateIdea(newIdeaEvent);
+
+      assert.entityCount("Idea", 3);
+
+      logStore();
+
+      const newCampaign = Campaign.load(campaignId);
+      assert.assertNotNull(
+          campaign,
+          "Loaded Campaign should not be null"
+      );
+  
+      let ideas = campaign!.ideas.load();
+    
+      const childIdeaId = Bytes.fromHexString(childIdea.id);
+      for (let i = 0; i < ideas.length; i++) {
+        if (typeof ideas[i] == 'object' && ideas[i].parentId == childIdeaId) {
+          var grandchildIdea = ideas[i];
+          break;
+        }
+      }
+
+      assert.assertNotNull(
+        grandchildIdea,
+        "Loaded grandchildIdea should not be null"
+      );
+
+      if (claim && childIdea && grandchildIdea) {
+
+        assert.fieldEquals("Idea", claim.id, "campaign", campaignId);
+        assert.fieldEquals("Idea", claim.id, "parentId", "0x0000000000000000000000000000000000000000");
+        assert.fieldEquals("Idea", claim.id, "parentIndex", "0"); //
+        assert.equals(ethereum.Value.fromI32(claim.children.length), ethereum.Value.fromI32(1));
+        const parentChildId1 = claim.children[0];
+        if (parentChildId1) {
+          assert.equals(ethereum.Value.fromBytes(parentChildId1), ethereum.Value.fromBytes(Bytes.fromHexString(childIdea.id)));
+        }
+        else {
+          assert.equals(ethereum.Value.fromBoolean(false), ethereum.Value.fromBoolean(true));
+        }
+        assert.fieldEquals("Idea", claim.id, "ideaType", "2");
+        assert.fieldEquals("Idea", claim.id, "text", "updated idea text");
+
+        assert.fieldEquals("Idea", childIdea.id, "campaign", campaignId);
+        assert.fieldEquals("Idea", childIdea.id, "parentId", claim.id.toString());
+        assert.fieldEquals("Idea", childIdea.id, "ideaType", "1");
+        assert.fieldEquals("Idea", childIdea.id, "text", "child idea text");
+        
+        assert.fieldEquals("Idea", grandchildIdea.id, "campaign", campaignId);
+        assert.fieldEquals("Idea", grandchildIdea.id, "parentId", childIdea.id.toString());
+        assert.fieldEquals("Idea", grandchildIdea.id, "parentIndex", "0"); //
+        assert.equals(ethereum.Value.fromI32(grandchildIdea.children.length), ethereum.Value.fromI32(0)); //
+        assert.fieldEquals("Idea", grandchildIdea.id, "ideaType", "3");
+        assert.fieldEquals("Idea", grandchildIdea.id, "text", "grandchild idea text");
+
+        // reload the child idea so we can check its children
+        const reloadedChildIdea = Idea.load(childIdea.id);
+
+        assert.assertNotNull(
+          reloadedChildIdea,
+          "Loaded reloadedChildIdea should not be null"
+        );
+        if (reloadedChildIdea) {
+          assert.fieldEquals("Idea", reloadedChildIdea.id, "parentIndex", "0"); //
+          assert.equals(ethereum.Value.fromI32(reloadedChildIdea.children.length), ethereum.Value.fromI32(1));
+          const parentChildId2 = reloadedChildIdea.children[0];
+          if (parentChildId2) {
+            assert.equals(ethereum.Value.fromBytes(parentChildId2), ethereum.Value.fromBytes(Bytes.fromHexString(grandchildIdea.id)));
+          }
+          else {
+            assert.equals(ethereum.Value.fromBoolean(false), ethereum.Value.fromBoolean(true));
+          }
+        }
+        else {
+          assert.equals(ethereum.Value.fromBoolean(false), ethereum.Value.fromBoolean(true));
+        }
+
+      }
+
+      logStore();
+
+    }
+    else {
+      assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+    }
+
+  });
+
+  test("updateIdeaParent", () => {
+
+    assert.entityCount("Idea", 3);
+
+    //
+    // test that the claim was stored properly
+    //
+    let campaignId = getCampaignId(0);
+
+    const campaign = Campaign.load(campaignId);
+    assert.assertNotNull(
+        campaign,
+        "Loaded Campaign should not be null"
+    );
+
+    let ideas = campaign!.ideas.load();
+
+    assert.equals(ethereum.Value.fromI32(3), ethereum.Value.fromI32(ideas.length));
+
+    const claim = ideas.filter(idea => idea.parentId == Bytes.fromHexString("0x0000000000000000000000000000000000000000"))[0];
+    const claimId = Bytes.fromHexString(claim.id);
+    for (let i = 0; i < ideas.length; i++) {
+      if (typeof ideas[i] == 'object' && ideas[i].parentId == claimId) {
+        var childIdea = ideas[i];
+        break;
+      }
+    }
+    const childIdeaId = Bytes.fromHexString(childIdea.id);
+    for (let i = 0; i < ideas.length; i++) {
+      if (typeof ideas[i] == 'object' && ideas[i].parentId == childIdeaId) {
+        var grandchildIdea = ideas[i];
+        break;
+      }
+    }
+    assert.assertNotNull(
+      claim,
+      "Loaded claim should not be null"
+    );
+    assert.assertNotNull(
+      childIdea,
+      "Loaded childIdea should not be null"
+    );
+    assert.assertNotNull(
+      grandchildIdea,
+      "Loaded grandchildIdea should not be null"
+    );
+
+    if (claim && childIdea && grandchildIdea) {
+
+      logStore();
+    
+      let updateIdeaParentEvent = createUpdateIdeaParentEvent(0, grandchildIdea.id, claim.id);
+      handleUpdateIdeaParent(updateIdeaParentEvent);
+
+      const reloadedClaim = Idea.load(claim.id);
+      const reloadedChild = Idea.load(childIdea.id);
+      const reloadedGrandchild = Idea.load(grandchildIdea.id);
+
+      if (reloadedClaim && reloadedChild && reloadedGrandchild) {
+
+        assert.fieldEquals("Idea", reloadedClaim.id, "campaign", campaignId);
+        assert.fieldEquals("Idea", reloadedClaim.id, "parentId", "0x0000000000000000000000000000000000000000");
+        assert.fieldEquals("Idea", reloadedClaim.id, "parentIndex", "0"); //
+        assert.equals(ethereum.Value.fromI32(reloadedClaim.children.length), ethereum.Value.fromI32(2));
+        const parentChildId1 = reloadedClaim.children[0];
+        if (parentChildId1) {
+          assert.equals(ethereum.Value.fromBytes(parentChildId1), ethereum.Value.fromBytes(Bytes.fromHexString(childIdea.id)));
+        }
+        else {
+          assert.equals(ethereum.Value.fromBoolean(false), ethereum.Value.fromBoolean(true));
+        }
+        const parentChildId2 = reloadedClaim.children[1];
+        if (parentChildId2) {
+          assert.equals(ethereum.Value.fromBytes(parentChildId2), ethereum.Value.fromBytes(Bytes.fromHexString(childIdea.id)));
+        }
+        else {
+          assert.equals(ethereum.Value.fromBoolean(false), ethereum.Value.fromBoolean(true));
+        }
+        assert.fieldEquals("Idea", reloadedClaim.id, "ideaType", "2");
+        assert.fieldEquals("Idea", reloadedClaim.id, "text", "updated idea text");
+
+        assert.fieldEquals("Idea", reloadedChild.id, "campaign", campaignId);
+        assert.fieldEquals("Idea", reloadedChild.id, "parentId", claim.id.toString());
+        assert.equals(ethereum.Value.fromI32(reloadedChild.children.length), ethereum.Value.fromI32(0));
+        assert.fieldEquals("Idea", reloadedChild.id, "ideaType", "1");
+        assert.fieldEquals("Idea", reloadedChild.id, "text", "child idea text");
+        
+        assert.fieldEquals("Idea", reloadedGrandchild.id, "campaign", campaignId);
+        assert.fieldEquals("Idea", reloadedGrandchild.id, "parentId", reloadedClaim.id.toString());
+        assert.fieldEquals("Idea", reloadedGrandchild.id, "parentIndex", "0"); //
+        assert.equals(ethereum.Value.fromI32(reloadedGrandchild.children.length), ethereum.Value.fromI32(0)); //
+        assert.fieldEquals("Idea", reloadedGrandchild.id, "ideaType", "3");
+        assert.fieldEquals("Idea", reloadedGrandchild.id, "text", "grandchild idea text");
+
+        logStore();
+
+      }
+      else {
+        assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+      }
+
+    }
+    else {
+      assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+    }
+
   });
 
   test("Follow", () => {
@@ -345,6 +803,76 @@ export function createCampaignUpdateEvent(campaignId: u32, author: string, title
   campaignUpdateEvent.parameters.push(contentParam)
 
   return campaignUpdateEvent
+}
+
+// @ts-ignore
+export function createIdeaEvent(nonce: u32, campaignId: u32, parentId: string, ideaType: i32, text: string): CreateIdeaEvent {
+  // @ts-ignore
+  let createIdeaEvent = changetype<CreateIdeaEvent>(newMockEvent())
+  createIdeaEvent.parameters = new Array()
+
+  // let theCampaignId = getCampaignId(campaignId)
+  let nonceParam = new ethereum.EventParam("nonce", ethereum.Value.fromI32(nonce))
+  let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
+  let parentIdParam = new ethereum.EventParam("parentId", ethereum.Value.fromString(parentId))
+  let ideaTypeParam = new ethereum.EventParam("ideaType", ethereum.Value.fromI32(ideaType))
+  let textParam = new ethereum.EventParam("text", ethereum.Value.fromString(text))
+
+  createIdeaEvent.parameters.push(nonceParam)
+  createIdeaEvent.parameters.push(campaignIdParam)
+  createIdeaEvent.parameters.push(parentIdParam)
+  createIdeaEvent.parameters.push(ideaTypeParam)
+  createIdeaEvent.parameters.push(textParam)
+
+  return createIdeaEvent
+}
+
+// @ts-ignore
+export function createUpdateIdeaTextEvent(campaignId: u32, ideaId: string, newText: string): UpdateIdeaTextEvent {
+  let updateIdeaTextEvent = changetype<UpdateIdeaTextEvent>(newMockEvent())
+  updateIdeaTextEvent.parameters = new Array()
+
+  let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
+  let ideaIdParam = new ethereum.EventParam("ideaId", ethereum.Value.fromString(ideaId))
+  let newTextParam = new ethereum.EventParam("text", ethereum.Value.fromString(newText))
+
+  updateIdeaTextEvent.parameters.push(campaignIdParam)
+  updateIdeaTextEvent.parameters.push(ideaIdParam)
+  updateIdeaTextEvent.parameters.push(newTextParam)
+
+  return updateIdeaTextEvent
+}
+
+// @ts-ignore
+export function createUpdateIdeaTypeEvent(campaignId: u32, ideaId: string, newType: u32): UpdateIdeaTypeEvent {
+  let updateIdeaTextEvent = changetype<UpdateIdeaTypeEvent>(newMockEvent())
+  updateIdeaTextEvent.parameters = new Array()
+
+  let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
+  let ideaIdParam = new ethereum.EventParam("ideaId", ethereum.Value.fromString(ideaId))
+  let newTypeParam = new ethereum.EventParam("ideaType", ethereum.Value.fromI32(newType))
+
+  updateIdeaTextEvent.parameters.push(campaignIdParam)
+  updateIdeaTextEvent.parameters.push(ideaIdParam)
+  updateIdeaTextEvent.parameters.push(newTypeParam)
+
+  return updateIdeaTextEvent
+}
+
+// @ts-ignore
+export function createUpdateIdeaParentEvent(campaignId: u32, ideaId: string, newParent: string): UpdateIdeaParentEvent {
+  let updateIdeaParentEvent = changetype<UpdateIdeaParentEvent>(newMockEvent())
+  updateIdeaParentEvent.parameters = new Array()
+
+  let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
+  let ideaIdParam = new ethereum.EventParam("ideaId", ethereum.Value.fromString(ideaId))
+  let newParentParam = new ethereum.EventParam("parentId", ethereum.Value.fromString(newParent))
+
+  updateIdeaParentEvent.parameters.push(campaignIdParam)
+  updateIdeaParentEvent.parameters.push(ideaIdParam)
+  updateIdeaParentEvent.parameters.push(newParentParam)
+
+  return updateIdeaParentEvent
 }
 
 // @ts-ignore

@@ -4,8 +4,8 @@ networkConfig:
         - mainnet
       prefix: ""
     - networks:
-        - hardhat
-      prefix: local-
+        - localhost
+      prefix: ""
 entitySettings:
   Campaign:
     useDefault: []
@@ -58,6 +58,22 @@ entitySettings:
   CampaignUpdate:
     useDefault: []
     setters: []
+    entityId:
+      - name: id
+        type: Bytes
+  Idea:
+    useDefault: []
+    setters:
+      - name: updateIdeaParent
+        fields:
+          - parentId
+          - parentIndex
+      - name: updateIdeaText
+        fields:
+          - text
+      - name: updateIdeaType
+        fields:
+          - ideaType
     entityId:
       - name: id
         type: Bytes

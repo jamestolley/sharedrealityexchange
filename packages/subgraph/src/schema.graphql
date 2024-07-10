@@ -30,6 +30,7 @@ type Campaign @entity {
   withdrawals: [Withdrawal]! @derivedFrom(field: "campaign")
   follows: [Follow]! @derivedFrom(field: "campaign")
   updates: [CampaignUpdate]! @derivedFrom(field: "campaign")
+  ideas: [Idea!]! @derivedFrom(field: "campaign")
 }
 
 type Donation @entity(immutable: true) {
@@ -78,4 +79,14 @@ type CampaignUpdate @entity {
   title: String!
   content: String!
   createdAt: BigInt!
+}
+
+type Idea @entity {
+    id: ID!
+    parentId: Bytes!
+    parentIndex: Int!
+    children: [Bytes!]!
+    ideaType: Int!
+    text: String!
+    campaign: Campaign!
 }

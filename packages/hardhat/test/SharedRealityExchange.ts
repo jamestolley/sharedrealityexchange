@@ -37,24 +37,14 @@ describe("SharedRealityExchange", function () {
       const title = "title";
       const claim = "claim";
 
-      const result = expect((campaignId = await sharedRealityExchange.createCampaign("title", "claim", "description")));
-
-      result.to
-        .emit(sharedRealityExchange, "CampaignCreated")
+      await expect((campaignId = await sharedRealityExchange.createCampaign("title", "claim", "description")))
+        .to.emit(sharedRealityExchange, "CampaignCreated")
         .withArgs(0, deployer.address, title, claim, "description");
-
-      result.to
-        .emit(sharedRealityExchange, "CreateIdea")
-        // campaignId, parentId, ideaType (claim == 0), claimText
-        .withArgs(0, "0x0000000000000000000000000000000000000000", 0, claim);
 
       expect(campaignId.value).to.equal(0);
 
-      // console.log(campaign)
-      // console.log({campaign})
-
       const campaign = await sharedRealityExchange.campaigns(0);
-      // console.log(campaign);
+
       expect(campaign[0]).to.equal(deployer);
       expect(campaign[1]).to.equal(title);
       expect(campaign[2]).to.equal(claim);
@@ -129,14 +119,14 @@ describe("SharedRealityExchange", function () {
     });
 
     it("Should allow the creation of an idea", async function () {
-      const parentId = "0x0000000000000000000000000000000000000001";
+      const parentId = "0x0000000000000000000000000000000000000000";
       const ideaType = IdeaType.Pro;
       const text = "This is the test idea";
 
       await expect(await sharedRealityExchange.createIdea(0, parentId, ideaType, text))
         .to.emit(sharedRealityExchange, "CreateIdea")
         // campaignId, parentId, ideaType (claim == 0), claimText
-        .withArgs(0, parentId, ideaType, text);
+        .withArgs(0, 0, parentId, ideaType, text);
     });
 
     // Cannot test the updating or deleting of an idea because we cannot get the ideaId from the contract

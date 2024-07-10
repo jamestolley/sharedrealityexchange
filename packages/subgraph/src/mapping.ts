@@ -1,4 +1,4 @@
-import { Bytes, BigInt, store } from "@graphprotocol/graph-ts";
+import { Bytes, BigInt, store, log } from "@graphprotocol/graph-ts";
 import {
   YourContract,
   GreetingChange,
@@ -13,9 +13,14 @@ import {
   CampaignClaimUpdated as CampaignClaimUpdatedEvent,
   CampaignDescriptionUpdated as CampaignDescriptionUpdatedEvent,
   Follow as FollowEvent,
-  Unfollow as UnfollowEvent
+  Unfollow as UnfollowEvent,
+  CreateIdea as CreateIdeaEvent,
+  UpdateIdeaParent as UpdateIdeaParentEvent,
+  UpdateIdeaText as UpdateIdeaTextEvent,
+  UpdateIdeaType as UpdateIdeaTypeEvent,
+  DeleteIdea as DeleteIdeaEvent
 } from "../generated/SharedRealityExchange/SharedRealityExchange";
-import { Greeting, Sender } from "../generated/schema";
+import { Greeting, Sender, Idea, IdeaLoader } from "../generated/schema";
 import {
   generateCampaignId,
   generateDonorId,
@@ -24,8 +29,11 @@ import {
   generateWithdrawalId,
   generateFollowId,
   generateCampaignUpdateId,
+  generateIdeaId,
   getOrInitializeDonor,
   getOrInitializeWithdrawer,
+  getOrInitializeIdea,
+  getIdea,
   createCampaign,
   getCampaign,
   createDonation,
@@ -38,9 +46,11 @@ import {
   getDonor,
   getWithdrawer,
   createFollow,
+  createIdea,
+  updateIdeaText,
+  updateIdeaType,
+  updateIdeaParent
 } from "../generated/UncrashableEntityHelpers"
-// } from "../generated/UncrashableEntityHelpers.edited"
-// import { tokenToString } from "typescript";
 
 export function handleGreetingChange(event: GreetingChange): void {
   let senderString = event.params.greetingSetter.toHexString();
@@ -215,24 +225,88 @@ export function handleCampaignUpdate(event: CampaignUpdateEvent): void {
   });
 }
 
-// export function handleOwnershipTransferred(event: OwnershipTransferredEvent): void {
+export function handleCreateIdea(event: CreateIdeaEvent): void {
 
-//   let transferId = false ? generateOwnershipTransferredId(Bytes.fromHexString("id")) : generateOwnershipTransferredId(
-//     event.transaction.hash.concatI32(
-//       event.logIndex.toI32()
-//     )
-//   );
+  const campaignId = getCampaignId(event.params.campaignId.toU32());
+  const campaign = getCampaign(campaignId);
+  
+  const logIndex = event.logIndex.toString();
+  const nonce = event.params.nonce.toString();
+  const hexString = event.transaction.hash.toHex().concat(logIndex).concat(nonce);
+  const evenHexString = ensureEvenCharacterHexString(hexString);
+  const ideaId = generateIdeaId(Bytes.fromHexString(evenHexString));
 
-//   createOwnershipTransferred(
-//     transferId, {
-//       previousOwner: Bytes.fromHexString(event.params.previousOwner.toHexString()),
-//       newOwner: Bytes.fromHexString(event.params.newOwner.toHexString()),
-//       blockNumber: event.block.number,
-//       blockTimestamp: event.block.timestamp,
-//       transactionHash: event.transaction.hash,
-//     }
-//   );
-// }
+  let parentIndex = 0;
+
+  if (event.params.parentId != "0x0000000000000000000000000000000000000000") {
+    const parentId = generateIdeaId(Bytes.fromHexString(event.params.parentId));
+    const parentIdea = getIdea(parentId);
+    let children = parentIdea.children;
+    children.push(Bytes.fromHexString(ideaId));
+    parentIdea.children = children;
+    parentIdea.save();
+
+    parentIndex = children.length - 1;
+  }
+
+  createIdea(ideaId, {
+    parentId: Bytes.fromHexString(event.params.parentId),
+    parentIndex: parentIndex,
+    children: new Array<Bytes>(),
+    ideaType: event.params.ideaType,
+    text: event.params.text,
+    campaign: campaign.id,
+  });
+
+}
+
+export function handleUpdateIdeaText(event: UpdateIdeaTextEvent): void {
+  updateIdeaText(event.params.ideaId, {
+    text: event.params.text
+  });
+}
+
+export function handleUpdateIdeaType(event: UpdateIdeaTypeEvent): void {
+  updateIdeaType(event.params.ideaId, {
+    ideaType: event.params.ideaType
+  });
+}
+
+export function handleUpdateIdeaParent(event: UpdateIdeaParentEvent): void {
+
+  const thisIdea = getIdea(event.params.ideaId);
+
+  const oldParent = getIdea(thisIdea.parentId.toString()); // Idea.load(thisIdea.parentId.toString())
+  const indexToDelete = thisIdea.parentIndex;
+  const children = oldParent.children;
+
+  // delete self from oldParent's children array
+  const movedIdeaId = children.pop();
+  oldParent.children = children;
+  oldParent.save();
+
+  // update the parentIndex of the moved old sibling
+  if (indexToDelete != children.length - 1) {
+    children[indexToDelete] = movedIdeaId!;
+
+    const movedIdea = getIdea(movedIdeaId!.toString());
+    movedIdea.parentIndex = indexToDelete;
+    movedIdea.save();
+  }
+  
+  // update the newParent's children array
+  const newParent = getIdea(event.params.parentId);
+  const newChildren = newParent.children;
+  newChildren.push(Bytes.fromHexString(event.params.ideaId));
+  newParent.children = newChildren;
+  newParent.save();
+
+  // update this idea's parentId and parentIndex
+  updateIdeaParent(event.params.ideaId, {
+    parentId: Bytes.fromHexString(event.params.parentId),
+    parentIndex: newChildren.length - 1,
+  });
+}
 
 export function handleUpdateCampaignOwner(event: CampaignOwnerUpdatedEvent): void {
   updateCampaignOwner(createCampaignId(event.params.campaignId), {

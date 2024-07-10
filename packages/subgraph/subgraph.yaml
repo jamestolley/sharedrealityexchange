@@ -9,7 +9,7 @@ dataSources:
     network: localhost
     source:
       abi: YourContract
-      address: "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"
+      address: "0x4ed7c70F96B99c776995fB64377f0d4aB3B0e1C1"
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -29,7 +29,7 @@ dataSources:
     network: localhost
     source:
       abi: SharedRealityExchange
-      address: "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"
+      address: "0x322813Fd9A801c5507c9de605d63CEA4f2CE6c44"
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -43,6 +43,7 @@ dataSources:
         - Follow
         - Unfollow
         - CampaignUpdate
+        - Idea
       abis:
         - name: SharedRealityExchange
           file: ./abis/localhost_SharedRealityExchange.json
@@ -67,4 +68,12 @@ dataSources:
           handler: handleUnfollow
         - event: CampaignUpdate(uint32,address,string,string)
           handler: handleCampaignUpdate
+        - event: CreateIdea(uint32,uint32,string,uint8,string)
+          handler: handleCreateIdea
+        - event: UpdateIdeaParent(uint32,string,string)
+          handler: handleUpdateIdeaParent
+        - event: UpdateIdeaText(uint32,string,string)
+          handler: handleUpdateIdeaText
+        - event: UpdateIdeaType(uint32,string,uint8)
+          handler: handleUpdateIdeaType
       file: ./src/mapping.ts
