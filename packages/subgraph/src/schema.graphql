@@ -83,9 +83,9 @@ type CampaignUpdate @entity {
 
 type Idea @entity {
     id: ID!
-    parentId: Bytes!
+    parentId: String!
     parentIndex: Int!
-    children: [Bytes!]!
+    children: [String!]!
     ideaType: Int!
     text: String!
     campaign: Campaign!

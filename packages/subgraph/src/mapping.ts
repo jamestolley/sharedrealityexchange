@@ -20,7 +20,7 @@ import {
   UpdateIdeaType as UpdateIdeaTypeEvent,
   DeleteIdea as DeleteIdeaEvent
 } from "../generated/SharedRealityExchange/SharedRealityExchange";
-import { Greeting, Sender, Idea, IdeaLoader } from "../generated/schema";
+import { Greeting, Sender, Idea } from "../generated/schema";
 import {
   generateCampaignId,
   generateDonorId,
@@ -49,7 +49,8 @@ import {
   createIdea,
   updateIdeaText,
   updateIdeaType,
-  updateIdeaParent
+  updateIdeaParent,
+  updateIdeaParentIndex
 } from "../generated/UncrashableEntityHelpers"
 
 export function handleGreetingChange(event: GreetingChange): void {
@@ -225,7 +226,7 @@ export function handleCampaignUpdate(event: CampaignUpdateEvent): void {
   });
 }
 
-export function handleCreateIdea(event: CreateIdeaEvent): void {
+export function handleCreateIdea(event: CreateIdeaEvent): string {
 
   const campaignId = getCampaignId(event.params.campaignId.toU32());
   const campaign = getCampaign(campaignId);
@@ -242,7 +243,7 @@ export function handleCreateIdea(event: CreateIdeaEvent): void {
     const parentId = generateIdeaId(Bytes.fromHexString(event.params.parentId));
     const parentIdea = getIdea(parentId);
     let children = parentIdea.children;
-    children.push(Bytes.fromHexString(ideaId));
+    children.push(ideaId);
     parentIdea.children = children;
     parentIdea.save();
 
@@ -250,14 +251,15 @@ export function handleCreateIdea(event: CreateIdeaEvent): void {
   }
 
   createIdea(ideaId, {
-    parentId: Bytes.fromHexString(event.params.parentId),
+    parentId: event.params.parentId,
     parentIndex: parentIndex,
-    children: new Array<Bytes>(),
+    children: new Array<string>(),
     ideaType: event.params.ideaType,
     text: event.params.text,
     campaign: campaign.id,
   });
 
+  return ideaId;
 }
 
 export function handleUpdateIdeaText(event: UpdateIdeaTextEvent): void {
@@ -274,38 +276,85 @@ export function handleUpdateIdeaType(event: UpdateIdeaTypeEvent): void {
 
 export function handleUpdateIdeaParent(event: UpdateIdeaParentEvent): void {
 
-  const thisIdea = getIdea(event.params.ideaId);
+  const thisIdea = getIdea(event.params.ideaId); // child
 
-  const oldParent = getIdea(thisIdea.parentId.toString()); // Idea.load(thisIdea.parentId.toString())
-  const indexToDelete = thisIdea.parentIndex;
-  const children = oldParent.children;
+  const oldParent = getIdea(thisIdea.parentId.toString()); // claim
+  const indexToDelete = thisIdea.parentIndex; // 0
+  const children = oldParent.children; // claim's children
+  const indexToMove = children.length - 1; // 1
 
   // delete self from oldParent's children array
-  const movedIdeaId = children.pop();
-  oldParent.children = children;
-  oldParent.save();
+  const movedIdeaId = children.pop(); // grandchildId
 
   // update the parentIndex of the moved old sibling
-  if (indexToDelete != children.length - 1) {
-    children[indexToDelete] = movedIdeaId!;
+  if (indexToDelete != indexToMove) { // 
+    children[indexToDelete] = movedIdeaId; // [grandchildId]
 
-    const movedIdea = getIdea(movedIdeaId!.toString());
-    movedIdea.parentIndex = indexToDelete;
-    movedIdea.save();
+    updateIdeaParentIndex(movedIdeaId, {
+      parentIndex: indexToDelete, // 0
+    })
   }
+
+  // save the updated oldParent.children array
+  oldParent.children = children; // claim.children: [grandchildId]
+  oldParent.save(); // 
   
   // update the newParent's children array
-  const newParent = getIdea(event.params.parentId);
-  const newChildren = newParent.children;
-  newChildren.push(Bytes.fromHexString(event.params.ideaId));
-  newParent.children = newChildren;
-  newParent.save();
+  const newParent = getIdea(event.params.parentId); // grandchildIdea
+  const newChildren = newParent.children; // grandchildIdea
+  newChildren.push(event.params.ideaId); // grandchildIdea.children: [childId]
+  newParent.children = newChildren; // save it
+  newParent.save(); // 
 
   // update this idea's parentId and parentIndex
-  updateIdeaParent(event.params.ideaId, {
-    parentId: Bytes.fromHexString(event.params.parentId),
-    parentIndex: newChildren.length - 1,
+  updateIdeaParent(event.params.ideaId, { // childId
+    parentId: event.params.parentId, // grandchildId
+    parentIndex: newChildren.length - 1, // 0
   });
+}
+
+/**
+ * To be called only by handleDeleteIdea, when deleting the ideas in the children array
+ */
+function deleteIdeaTree(thisIdea: Idea): void {
+
+  // remove all of one's own children
+  for (let i = 0; i < thisIdea.children.length; i++) {
+    const nextIdea = getIdea(thisIdea.children[i]!);
+    deleteIdeaTree(nextIdea);
+  }
+
+  store.remove("Idea", thisIdea.id);
+}
+
+export function handleDeleteIdea(event: DeleteIdeaEvent): void {
+
+  const thisIdea = getIdea(event.params.ideaId); // grandchild
+
+  const oldParent = getIdea(thisIdea.parentId.toString()); // claim
+  const indexToDelete = thisIdea.parentIndex; // 0
+  const children = oldParent.children; // claim's children
+  const indexToMove = children.length - 1; // 1
+
+  // delete self from oldParent's children array
+  const movedIdeaId = children.pop(); // childId
+
+  // update the parentIndex of the moved old sibling
+  if (indexToDelete != indexToMove) { // 
+    children[indexToDelete] = movedIdeaId; // [childId]
+
+    updateIdeaParentIndex(movedIdeaId, {
+      parentIndex: indexToDelete, // 0
+    })
+  }
+
+  // save the updated oldParent.children array
+  oldParent.children = children; // claim.children: [grandchildId]
+  oldParent.save(); // 
+
+  // delete this idea and all of its descendents
+  deleteIdeaTree(thisIdea);
+
 }
 
 export function handleUpdateCampaignOwner(event: CampaignOwnerUpdatedEvent): void {
