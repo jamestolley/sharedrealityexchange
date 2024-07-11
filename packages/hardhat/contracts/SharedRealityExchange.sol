@@ -40,33 +40,7 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		Part
 	}
 
-	struct Idea {
-
-		//
-		// object tree data structure attributes first
-		string id;
-
-		// the id of the parent idea
-		string parentId;
-
-		//  the position of this idea in the Parent's children list
-		uint16 parentIndex;
-
-		// unordered list of child ideas below this idea
-		string[] children;
-
-		//
-		// custom, application-specific node attributes below
-
-		// Pro, Con, or Part: (0, 1, or 2)
-		IdeaType ideaType;
-
-		// text of the idea
-		string text;
-	}
-
 	Campaign[] public campaigns;
-	Idea[] public ideas;
 	mapping(address => DonorHistory) public donations;
 
 	// just to make unique ideaIds in my tests
@@ -355,17 +329,6 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		Campaign storage campaign = campaigns[_campaignId];
 
 		require(msg.sender == campaign.owner, "Caller is not the current owner");
-
-		string[] memory children = new string[](0);
-		Idea memory idea = Idea({
-			id: "0x00",
-			parentId: _parentId,
-			parentIndex: 0,
-			children: children,
-			ideaType: _ideaType,
-			text: _text
-		});
-		ideas.push(idea);
 
 		emit CreateIdea(ideaNonce, _campaignId, _parentId, _ideaType, _text);
 		
