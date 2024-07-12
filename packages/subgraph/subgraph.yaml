@@ -76,4 +76,6 @@ dataSources:
           handler: handleUpdateIdeaText
         - event: UpdateIdeaType(uint32,string,uint8)
           handler: handleUpdateIdeaType
+        - event: DeleteIdea(uint32,string)
+          handler: handleDeleteIdea
       file: ./src/mapping.ts

@@ -226,7 +226,7 @@ export function handleCampaignUpdate(event: CampaignUpdateEvent): void {
   });
 }
 
-export function handleCreateIdea(event: CreateIdeaEvent): string {
+export function handleCreateIdea(event: CreateIdeaEvent): void {
 
   const campaignId = getCampaignId(event.params.campaignId.toU32());
   const campaign = getCampaign(campaignId);
@@ -259,7 +259,7 @@ export function handleCreateIdea(event: CreateIdeaEvent): string {
     campaign: campaign.id,
   });
 
-  return ideaId;
+  // return ideaId;
 }
 
 export function handleUpdateIdeaText(event: UpdateIdeaTextEvent): void {
@@ -320,7 +320,7 @@ function deleteIdeaTree(thisIdea: Idea): void {
 
   // remove all of one's own children
   for (let i = 0; i < thisIdea.children.length; i++) {
-    const nextIdea = getIdea(thisIdea.children[i]!);
+    const nextIdea = getIdea(thisIdea.children[i]);
     deleteIdeaTree(nextIdea);
   }
 
@@ -330,6 +330,11 @@ function deleteIdeaTree(thisIdea: Idea): void {
 export function handleDeleteIdea(event: DeleteIdeaEvent): void {
 
   const thisIdea = getIdea(event.params.ideaId); // grandchild
+
+  // cannot delete the claim
+  if (thisIdea.parentId.toString() == "0x0000000000000000000000000000000000000000") {
+    return;
+  }
 
   const oldParent = getIdea(thisIdea.parentId.toString()); // claim
   const indexToDelete = thisIdea.parentIndex; // 0

@@ -802,15 +802,18 @@ describe("Shared Reality Exchange", () => {
       assert.entityCount("Idea", 3);
 
       const createIdeaEvent1 = createIdeaEvent(3, 0, grandchildIdea.id, 3, "This is a test.");
-      const ideaId1 = handleCreateIdea(createIdeaEvent1);
+      handleCreateIdea(createIdeaEvent1);
 
-      const createIdeaEvent2 = createIdeaEvent(4, 0, ideaId1, 3, "This is a test.");
+      const createIdeaEvent2 = createIdeaEvent(4, 0, grandchildIdea.id, 3, "This is a test.");
+      // const createIdeaEvent2 = createIdeaEvent(4, 0, ideaId1, 3, "This is a test.");
       handleCreateIdea(createIdeaEvent2);
 
-      const createIdeaEvent3 = createIdeaEvent(5, 0, ideaId1, 3, "This is a test.");
-      const ideaId3 = handleCreateIdea(createIdeaEvent3);
+      const createIdeaEvent3 = createIdeaEvent(5, 0, grandchildIdea.id, 3, "This is a test.");
+      // const createIdeaEvent3 = createIdeaEvent(5, 0, ideaId1, 3, "This is a test.");
+      handleCreateIdea(createIdeaEvent3);
 
-      const createIdeaEvent4 = createIdeaEvent(6, 0, ideaId3, 3, "This is a test.");
+      const createIdeaEvent4 = createIdeaEvent(6, 0, grandchildIdea.id, 3, "This is a test.");
+      // const createIdeaEvent4 = createIdeaEvent(6, 0, ideaId3, 3, "This is a test.");
       handleCreateIdea(createIdeaEvent4);
 
       assert.entityCount("Idea", 7);
