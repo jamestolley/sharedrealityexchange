@@ -1,5 +1,6 @@
 "use client";
 
+import { Dispatch, SetStateAction } from "react";
 import { useState } from "react";
 import { ZodFormattedError, z } from "zod";
 import getErrorMessage from "~~/components/GetErrorMessage";
@@ -9,6 +10,8 @@ import { notification } from "~~/utils/scaffold-eth";
 interface CampaignUpdateFormProps {
   refetch: () => void;
   campaignId: number;
+  updateCount: number;
+  setUpdateCount: Dispatch<SetStateAction<number>>;
 }
 
 const updateSchema = z.object({
@@ -16,7 +19,7 @@ const updateSchema = z.object({
     .string()
     .trim()
     .min(10, {
-      message: "The title must be at least 20 characters long",
+      message: "The title must be at least 10 characters long",
     })
     .max(256, {
       message: "The title must be less than 256 characters long",
@@ -32,7 +35,7 @@ const updateSchema = z.object({
     }),
 });
 
-export const CampaignUpdateForm = ({ campaignId, refetch }: CampaignUpdateFormProps) => {
+export const CampaignUpdateForm = ({ campaignId, refetch, updateCount, setUpdateCount }: CampaignUpdateFormProps) => {
   const [titleInput, setTitleInput] = useState("");
   const [contentInput, setContentInput] = useState("");
   const [error, setError] = useState<ZodFormattedError<
@@ -41,25 +44,6 @@ export const CampaignUpdateForm = ({ campaignId, refetch }: CampaignUpdateFormPr
   > | null>(null);
 
   const { writeContractAsync, isPending } = useScaffoldWriteContract("SharedRealityExchange");
-
-  // useScaffoldWatchContractEvent({
-  //   contractName: "SharedRealityExchange",
-  //   eventName: "CampaignUpdate",
-  //   onLogs: logs => {
-  //     console.log(logs);
-  //     logs.map(log => {
-  //       const { campaignId, author, title, content } = log.args as unknown as {
-  //         campaignId: string;
-  //         author: string;
-  //         title: string;
-  //         content: string;
-  //       };
-  //       if (userAccount.address === author && title == titleInput && title == titleInput && content == contentInput) {
-  //         router.push(`/campaigns/${campaignId}`);
-  //       }
-  //     });
-  //   },
-  // });
 
   const handleSubmit = async () => {
     setError(null);
@@ -77,6 +61,7 @@ export const CampaignUpdateForm = ({ campaignId, refetch }: CampaignUpdateFormPr
     }
 
     try {
+      console.log("args: ", [campaignId, titleInput, contentInput]);
       await writeContractAsync(
         {
           functionName: "createCampaignUpdate",
@@ -86,6 +71,7 @@ export const CampaignUpdateForm = ({ campaignId, refetch }: CampaignUpdateFormPr
           onBlockConfirmation: txnReceipt => {
             console.log("📦 Transaction blockHash", txnReceipt);
             notification.success("Your campaign update has been created.", { position: "top-right", duration: 6000 });
+            setUpdateCount(updateCount + 1);
             refetch();
           },
         },

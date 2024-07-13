@@ -56,7 +56,7 @@ export const CreateCampaign = () => {
     eventName: "CampaignCreated",
     onLogs: logs => {
       console.log(logs);
-      logs.map(log => {
+      logs.map(async log => {
         const { campaignId, owner, title, claim } = log.args as unknown as {
           campaignId: string;
           owner: string;

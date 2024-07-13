@@ -1,27 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { GQL_CAMPAIGNUPDATES_by_campaignId } from "../_helpers/Queries";
+import { Dispatch, SetStateAction } from "react";
 import { CampaignUpdateForm } from "./CampaignUpdateForm";
-import { useQuery } from "@apollo/client";
-import { useAccount } from "wagmi";
-import getErrorMessage from "~~/components/GetErrorMessage";
 import { Address } from "~~/components/scaffold-eth";
 
-type Campaign = {
-  id: string;
-  campaignId: number;
-  owner: string;
-  title: string;
-  claim: string;
-  description: string;
-  amountCollected: bigint;
-  amountWithdrawn: bigint;
-};
-
 type CampaignsUpdatesListProps = {
-  campaign: Campaign;
+  loading: boolean;
+  campaignId: number;
   refetch: () => void;
+  userIsOwner: boolean;
+  updates: CampaignUpdate[];
+  pageSize: number;
+  setPageSize: Dispatch<SetStateAction<number>>;
+  pageNum: number;
+  setPageNum: Dispatch<SetStateAction<number>>;
+  updateCount: number;
+  setUpdateCount: Dispatch<SetStateAction<number>>;
 };
 
 type CampaignUpdate = {
@@ -32,51 +26,39 @@ type CampaignUpdate = {
   createdAt: number;
 };
 
-export const CampaignsUpdatesList = ({ campaign, refetch }: CampaignsUpdatesListProps) => {
-  const [pageSize, setPageSize] = useState(25);
-  const [pageNum, setPageNum] = useState(0);
-
-  const account = useAccount();
-  const userIsOwner = account?.address?.toLowerCase() == campaign.owner.toLowerCase();
-
-  // console.log("userIsOwner", userIsOwner, account.address, campaign.owner)
-
-  const { loading, error, data } = useQuery(GQL_CAMPAIGNUPDATES_by_campaignId(campaign.campaignId), {
-    variables: {
-      limit: pageSize,
-      offset: pageNum * pageSize,
-      // campaignId: campaign.campaignId,
-    },
-    pollInterval: 0,
-  });
-
-  useEffect(() => {
-    if (error !== undefined && error !== null) console.log("GQL_CAMPAIGNUPDATES_by_campaignId Query Error: ", error);
-  }, [error]);
-
+export const CampaignsUpdatesList = ({
+  loading,
+  campaignId,
+  refetch,
+  userIsOwner,
+  updates,
+  pageSize,
+  setPageSize,
+  pageNum,
+  setPageNum,
+  updateCount,
+  setUpdateCount,
+}: CampaignsUpdatesListProps) => {
   if (loading) {
     return (
       <div className="flex flex-col gap-2 p-2 m-4 mx-auto border shadow-xl border-base-300 bg-base-200 sm:rounded-lg">
         <span className="loading loading-spinner loading-sm"></span>
       </div>
     );
-  } else if (error) {
-    const message = getErrorMessage(error);
-    return (
-      <div className="flex flex-col gap-2 p-2 m-4 mx-auto border shadow-xl border-base-300 bg-base-200 sm:rounded-lg">
-        <span className="text-srered">An error has occurred: {message}. Refresh the page or try again later.</span>
-      </div>
-    );
   } else {
-    // console.log("data: ", data);
-    const updatesList = data.campaignUpdates;
-    // console.log("updatesList", updatesList);
     return (
       <>
         <div className="overflow-x-auto">
-          {userIsOwner && <CampaignUpdateForm campaignId={campaign.campaignId} refetch={refetch} />}
+          {userIsOwner && (
+            <CampaignUpdateForm
+              campaignId={campaignId}
+              refetch={refetch}
+              updateCount={updateCount}
+              setUpdateCount={setUpdateCount}
+            />
+          )}
           <div className="bg-base-200 min-h-screen">
-            {updatesList.map((update: CampaignUpdate) => {
+            {updates.map((update: CampaignUpdate) => {
               // console.log("donation", donation)
               return (
                 <div key={update.id} className="text-left w-full mx-8">

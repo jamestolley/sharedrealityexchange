@@ -123,10 +123,10 @@ describe("SharedRealityExchange", function () {
       const ideaType = IdeaType.Pro;
       const text = "This is the test idea";
 
-      await expect(await sharedRealityExchange.createIdea(0, parentId, ideaType, text))
+      await expect(await sharedRealityExchange.createIdea(0, parentId, ideaType, text, 0, 0))
         .to.emit(sharedRealityExchange, "CreateIdea")
         // campaignId, parentId, ideaType (claim == 0), claimText
-        .withArgs(0, 0, parentId, ideaType, text);
+        .withArgs(0, 0, parentId, ideaType, text, 0, 0);
     });
 
     // Cannot test the updating or deleting of an idea because we cannot get the ideaId from the contract

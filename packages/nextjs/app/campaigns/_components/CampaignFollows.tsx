@@ -1,68 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { GQL_FOLLOWS_by_campaignid } from "../_helpers/Queries";
-import { useQuery } from "@apollo/client";
-import getErrorMessage from "~~/components/GetErrorMessage";
+import { Dispatch, SetStateAction } from "react";
 import { Address } from "~~/components/scaffold-eth";
 
-type Campaign = {
-  id: string;
-  campaignId: number;
-  owner: string;
-  title: string;
-  claim: string;
-  description: string;
-  amountCollected: bigint;
-  amountWithdrawn: bigint;
-};
-
 type CampaignsFollowsListProps = {
-  campaign: Campaign;
+  loading: boolean;
+  follows: Follow[];
+  pageSize: number;
+  setPageSize: Dispatch<SetStateAction<number>>;
+  pageNum: number;
+  setPageNum: Dispatch<SetStateAction<number>>;
 };
 
 type Follow = {
   id: string;
   user: string;
-  campaign: Campaign;
   createdAt: number;
 };
 
-export const CampaignsFollowsList = ({ campaign }: CampaignsFollowsListProps) => {
-  const [pageSize, setPageSize] = useState(25);
-  const [pageNum, setPageNum] = useState(0);
-
-  const { loading, error, data } = useQuery(GQL_FOLLOWS_by_campaignid(), {
-    variables: {
-      limit: pageSize,
-      offset: pageNum * pageSize,
-      // all lowercase campaignid means the campaign's "id" property, not "campaignId"
-      campaignid: campaign.id,
-    },
-    pollInterval: 0,
-  });
-
-  useEffect(() => {
-    if (error !== undefined && error !== null) console.log("GQL_WITHDRAWALS_by_campaignid Query Error: ", error);
-  }, [error]);
-
+export const CampaignsFollowsList = ({
+  loading,
+  follows,
+  pageSize,
+  setPageSize,
+  pageNum,
+  setPageNum,
+}: CampaignsFollowsListProps) => {
   if (loading) {
     return (
       <div className="flex flex-col gap-2 p-2 m-4 mx-auto border shadow-xl border-base-300 bg-base-200 sm:rounded-lg">
         <span className="loading loading-spinner loading-sm"></span>
       </div>
     );
-  } else if (error) {
-    const message = getErrorMessage(error);
-    return (
-      <div className="flex flex-col gap-2 p-2 m-4 mx-auto border shadow-xl border-base-300 bg-base-200 sm:rounded-lg">
-        <span className="text-srered">An error has occurred: {message}. Refresh the page or try again later.</span>
-      </div>
-    );
   } else {
-    // console.log("data: ", data);
-    const followsList = data.follows;
-    // console.log("followsList", followsList);
     return (
       <>
         <div className="overflow-x-auto">
@@ -75,7 +45,7 @@ export const CampaignsFollowsList = ({ campaign }: CampaignsFollowsListProps) =>
               </tr>
             </thead>
             <tbody>
-              {followsList?.map((follow: Follow) => {
+              {follows?.map((follow: Follow) => {
                 // console.log("follow", follow)
                 return (
                   <tr key={follow.id} className="hover">

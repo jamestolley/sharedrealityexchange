@@ -1,0 +1,47 @@
+.idea-node {
+  height: 50px;
+  border: 1px solid #eee;
+  padding: 5px;
+  border-radius: 5px;
+  background-color: #f3f3f3;
+}
+
+.react-flow__node,
+.react-flow__node div,
+.react-flow__node div div,
+.react-flow__node div div div,
+.react-flow__node.react-flow__node-ideaNode,
+.react-flow__node-ideaNode,
+.react-flow__node-ideaNode div,
+.react-flow__node-ideaNode div div,
+.react-flow__node-ideaNode div div div,
+.react-flow__node.selected .idea-node {
+  background-color: white !important;
+}
+
+path.react-flow__edge-path {
+  stroke-width: 2px;
+}
+
+.react-flow__edge.selected path {
+  stroke-opacity: .6;
+}
+
+.idea-node label {
+  display: block;
+  color: #777;
+  font-size: 12px;
+}
+
+.idea-node textarea,
+.idea-node textarea:active {
+  border: none !important;
+  outline: none !important;
+  width: 97%;
+  overflow: hidden;
+  min-height: 32px;
+  max-height: 300px;
+  border: 1px solid black !important;
+  resize: none;
+  border-radius: 3px;
+}

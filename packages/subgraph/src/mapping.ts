@@ -278,6 +278,11 @@ export function handleUpdateIdeaParent(event: UpdateIdeaParentEvent): void {
 
   const thisIdea = getIdea(event.params.ideaId); // child
 
+  // cannot change the parent of the claim
+  if (thisIdea.parentId.toString() == "0x0000000000000000000000000000000000000000") {
+    return;
+  }
+
   const oldParent = getIdea(thisIdea.parentId.toString()); // claim
   const indexToDelete = thisIdea.parentIndex; // 0
   const children = oldParent.children; // claim's children

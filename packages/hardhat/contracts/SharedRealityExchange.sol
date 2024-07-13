@@ -112,7 +112,9 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		uint32 campaignId,
 		string parentId,
 		IdeaType ideaType,
-		string text
+		string text,
+		uint16 x,
+		uint16 y
 	);
 
     // edits the old parent, some of the old parent's other children, and the new parent
@@ -120,6 +122,14 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		uint32 campaignId,
 		string ideaId,
 		string parentId
+	);
+
+    // edits the position relative to its parent
+	event UpdateIdeaPosition(
+		uint32 campaignId,
+		string ideaId,
+		uint16 x,
+		uint16 y
 	);
 
 	// just edits the one entity in the graph database
@@ -174,8 +184,8 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 
 		emit CampaignCreated(campaignId, msg.sender, _title, _claim, _description);
 
-		// string memory parentId = "0x0000000000000000000000000000000000000000";
-		// createIdea(campaignId, parentId, IdeaType.Claim, _claim);
+		string memory parentId = "0x0000000000000000000000000000000000000000";
+		createIdea(campaignId, parentId, IdeaType.Claim, _claim, 0, 0);
 
 		ideaNonce = 0;
 
@@ -314,7 +324,7 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		emit CampaignUpdate(_campaignId, campaign.owner, _title, _content);
 	}
 
-	function createIdea(uint32 _campaignId, string memory _parentId, IdeaType _ideaType, string calldata _text) public {
+	function createIdea(uint32 _campaignId, string memory _parentId, IdeaType _ideaType, string calldata _text, uint16 x, uint16 y) public {
 		
 		require(campaigns.length > _campaignId, "Campaign not found");
 
@@ -330,7 +340,7 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 
 		require(msg.sender == campaign.owner, "Caller is not the current owner");
 
-		emit CreateIdea(ideaNonce, _campaignId, _parentId, _ideaType, _text);
+		emit CreateIdea(ideaNonce, _campaignId, _parentId, _ideaType, _text, x, y);
 		
 		ideaNonce = ideaNonce + 1;
 	}
@@ -342,8 +352,23 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		Campaign storage campaign = campaigns[_campaignId];
 
 		require(msg.sender == campaign.owner, "Caller is not the current owner");
+		
+		// require(campaign.parentId != "0x0000000000000000000000000000000000000000", "Cannot change the parent of the claim");
 
 		emit UpdateIdeaParent(_campaignId, _ideaId, _parentId);
+	}
+
+	function updateIdeaPosition(uint32 _campaignId, string calldata _ideaId, uint16 x, uint16 y) public {
+
+		require(campaigns.length > _campaignId, "Campaign not found");
+
+		Campaign storage campaign = campaigns[_campaignId];
+
+		require(msg.sender == campaign.owner, "Caller is not the current owner");
+		
+		// require(campaign.parentId != "0x0000000000000000000000000000000000000000", "Cannot change the position of the claim");
+
+		emit UpdateIdeaPosition(_campaignId, _ideaId, x, y);
 	}
 
 	function updateIdeaType(uint32 _campaignId, string calldata _ideaId, IdeaType _ideaType) public {
@@ -383,6 +408,8 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		Campaign storage campaign = campaigns[_campaignId];
 
 		require(msg.sender == campaign.owner, "Caller is not the current owner");
+
+		// require(campaign.parentId != "0x0000000000000000000000000000000000000000", "Cannot delete the claim");
 
 		emit DeleteIdea(_campaignId, _ideaId);
 	}

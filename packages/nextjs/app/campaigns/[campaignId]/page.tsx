@@ -9,6 +9,7 @@ import { CampaignsFollowsList } from "../_components/CampaignFollows";
 import { CampaignsUpdatesList } from "../_components/CampaignUpdates";
 import { CampaignWithdraw } from "../_components/CampaignWithdraw";
 import { CampaignsWithdrawalsList } from "../_components/CampaignWithdrawals";
+import { Conversation } from "../_components/conversation/Conversation";
 import { GQL_CAMPAIGN_by_campaignId } from "../_helpers/Queries";
 import { useQuery } from "@apollo/client";
 import { NextPage } from "next";
@@ -30,6 +31,15 @@ type CampaignType = {
   amountWithdrawn: bigint;
 };
 
+type Idea = {
+  id: string;
+  campaignId: number;
+  parentId: string;
+  parentIndex: number;
+  ideaType: number;
+  text: string;
+};
+
 const CampaignDetail: NextPage = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -37,6 +47,16 @@ const CampaignDetail: NextPage = () => {
   const currentTabIndex = searchParams.get("tab") ?? 0;
   const [tabIndex, setTabIndex] = useState(currentTabIndex);
   const { campaignId } = useParams<{ campaignId: string }>();
+
+  const [updatesPageSize, setUpdatesPageSize] = useState(25);
+  const [updatesPageNum, setUpdatesPageNum] = useState(0);
+  const [donationsPageSize, setDonationsPageSize] = useState(25);
+  const [donationsPageNum, setDonationsPageNum] = useState(0);
+  const [withdrawalsPageSize, setWithdrawalsPageSize] = useState(25);
+  const [withdrawalsPageNum, setWithdrawalsPageNum] = useState(0);
+  const [followsPageSize, setFollowsPageSize] = useState(25);
+  const [followsPageNum, setFollowsPageNum] = useState(0);
+  const [updateCount, setUpdateCount] = useState(0);
 
   useEffect(() => {
     const getTab = searchParams.get("tab");
@@ -50,13 +70,23 @@ const CampaignDetail: NextPage = () => {
   const useAccountaddress = useAccount().address?.toLowerCase();
 
   const { loading, error, data, refetch } = useQuery(GQL_CAMPAIGN_by_campaignId(), {
-    variables: { campaignId: parseInt(campaignId) },
+    variables: {
+      campaignId: parseInt(campaignId),
+      updatesPageSize: updatesPageSize,
+      updatesOffset: updatesPageNum * updatesPageSize,
+      donationsPageSize: donationsPageSize,
+      donationsOffset: donationsPageNum * donationsPageSize,
+      withdrawalsPageSize: withdrawalsPageSize,
+      withdrawalsOffset: withdrawalsPageNum * withdrawalsPageSize,
+      followsPageSize: followsPageSize,
+      followsOffset: followsPageNum * followsPageSize,
+    },
     pollInterval: 0,
   });
 
-  // if (data) {
-  //   console.log("data!!", data);
-  // }
+  if (data) {
+    console.log("data!!", data);
+  }
 
   if (isNaN(parseInt(campaignId))) {
     return notFound();
@@ -77,9 +107,11 @@ const CampaignDetail: NextPage = () => {
     amountWithdrawn: 0n,
   };
   let userIsOwner = false;
+  let ideas: Idea[] = [];
   if (data && data.campaigns && data.campaigns.length) {
     campaign = data.campaigns[0];
     userIsOwner = useAccountaddress == campaign.owner.toLowerCase();
+    ideas = data.ideas;
   }
 
   const onFieldUpdate = async (field: "owner" | "title" | "claim" | "description", text: string) => {
@@ -228,7 +260,7 @@ const CampaignDetail: NextPage = () => {
               onClick={() => setTabIndex(1)}
             />
             <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
-              Conversation
+              <Conversation campaign={campaign} ideas={ideas} refetch={refetch} />
             </div>
             <input
               type="radio"
@@ -240,7 +272,19 @@ const CampaignDetail: NextPage = () => {
               onClick={() => setTabIndex(2)}
             />
             <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
-              <CampaignsUpdatesList campaign={campaign} refetch={refetch} />
+              <CampaignsUpdatesList
+                loading={loading}
+                refetch={refetch}
+                campaignId={parseInt(campaignId)}
+                userIsOwner={userIsOwner}
+                updates={data.campaignUpdates}
+                pageSize={updatesPageSize}
+                setPageSize={setUpdatesPageSize}
+                pageNum={updatesPageNum}
+                setPageNum={setUpdatesPageNum}
+                updateCount={updateCount}
+                setUpdateCount={setUpdateCount}
+              />
             </div>
             <input
               type="radio"
@@ -252,7 +296,14 @@ const CampaignDetail: NextPage = () => {
               onClick={() => setTabIndex(3)}
             />
             <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
-              <CampaignsDonationsList campaign={campaign} />
+              <CampaignsDonationsList
+                loading={loading}
+                donations={data.donations}
+                pageSize={donationsPageSize}
+                setPageSize={setDonationsPageSize}
+                pageNum={donationsPageNum}
+                setPageNum={setDonationsPageNum}
+              />
             </div>
             <input
               type="radio"
@@ -264,7 +315,14 @@ const CampaignDetail: NextPage = () => {
               onClick={() => setTabIndex(4)}
             />
             <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
-              <CampaignsWithdrawalsList campaign={campaign} />
+              <CampaignsWithdrawalsList
+                loading={loading}
+                withdrawals={data.withdrawals}
+                pageSize={withdrawalsPageSize}
+                setPageSize={setWithdrawalsPageSize}
+                pageNum={withdrawalsPageNum}
+                setPageNum={setWithdrawalsPageNum}
+              />
             </div>
             <input
               type="radio"
@@ -276,28 +334,16 @@ const CampaignDetail: NextPage = () => {
               onClick={() => setTabIndex(5)}
             />
             <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
-              <CampaignsFollowsList campaign={campaign} />
+              <CampaignsFollowsList
+                loading={loading}
+                follows={data.follows}
+                pageSize={followsPageSize}
+                setPageSize={setFollowsPageSize}
+                pageNum={followsPageNum}
+                setPageNum={setFollowsPageNum}
+              />
             </div>
           </div>
-          {/* <div className="flex justify-center mb-6 mt-14">
-            <button
-              className={showingPosts ? "btn btn-accent rounded-none" : "btn btn-primary rounded-none"}
-              onClick={() => setShowingPosts(true)}
-            >
-              {showingPosts ? "Viewing Posts" : "View Posts"}
-            </button>
-            <button
-              className={showingPosts ? "btn btn-primary rounded-none" : "btn btn-accent rounded-none"}
-              onClick={() => setShowingPosts(false)}
-            >
-              {showingPosts ? "View Followers" : "Viewing Followers"}
-            </button>
-          </div> */}
-          {/* {showingPosts ? (
-            <SocialPostList fundRunId={frId} />
-          ) : (
-            <WhoFollowsThisFundRun fundRunId={parseInt(frId)} />
-          )} */}
         </div>
       </>
     );

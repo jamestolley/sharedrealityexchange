@@ -3,7 +3,17 @@ import { gql } from "@apollo/client";
 //for viewing a single Campaign
 export const GQL_CAMPAIGN_by_campaignId = () => {
   return gql`
-    query ($campaignId: Int!) {
+    query (
+      $campaignId: Int!
+      $followsPageSize: Int!
+      $followsOffset: Int!
+      $donationsPageSize: Int!
+      $donationsOffset: Int!
+      $withdrawalsPageSize: Int!
+      $withdrawalsOffset: Int!
+      $updatesPageSize: Int!
+      $updatesOffset: Int!
+    ) {
       campaigns(where: { campaignId: $campaignId }) {
         id
         campaignId
@@ -14,7 +24,64 @@ export const GQL_CAMPAIGN_by_campaignId = () => {
         amountCollected
         amountWithdrawn
       }
-      follows(where: { campaign_: { campaignId: $campaignId } }) {
+      ideas(where: { campaign_: { campaignId: $campaignId } }) {
+        id
+        parentId
+        parentIndex
+        children
+        ideaType
+        text
+      }
+      campaignUpdates(
+        orderBy: createdAt
+        orderDirection: desc
+        first: $updatesPageSize
+        skip: $updatesOffset
+        where: { campaign_: { campaignId: $campaignId } }
+      ) {
+        id
+        author
+        title
+        content
+        createdAt
+      }
+      donations(
+        orderBy: createdAt
+        orderDirection: desc
+        first: $donationsPageSize
+        skip: $donationsOffset
+        where: { campaign_: { campaignId: $campaignId } }
+      ) {
+        id
+        donor {
+          id
+        }
+        amount
+        comment
+        createdAt
+      }
+      withdrawals(
+        orderBy: createdAt
+        orderDirection: desc
+        first: $withdrawalsPageSize
+        skip: $withdrawalsOffset
+        where: { campaign_: { campaignId: $campaignId } }
+      ) {
+        id
+        withdrawer {
+          id
+        }
+        amount
+        comment
+        createdAt
+      }
+      follows(
+        orderBy: createdAt
+        orderDirection: desc
+        first: $followsPageSize
+        skip: $followsOffset
+        where: { campaign_: { campaignId: $campaignId } }
+      ) {
         user
         createdAt
       }
