@@ -1,6 +1,5 @@
-import { Bytes, BigInt, store, log } from "@graphprotocol/graph-ts";
+import { Bytes, BigInt, store } from "@graphprotocol/graph-ts";
 import {
-  YourContract,
   GreetingChange,
 } from "../generated/YourContract/YourContract";
 import { 
@@ -16,6 +15,7 @@ import {
   Unfollow as UnfollowEvent,
   CreateIdea as CreateIdeaEvent,
   UpdateIdeaParent as UpdateIdeaParentEvent,
+  UpdateIdeaPosition as UpdateIdeaPositionEvent,
   UpdateIdeaText as UpdateIdeaTextEvent,
   UpdateIdeaType as UpdateIdeaTypeEvent,
   DeleteIdea as DeleteIdeaEvent
@@ -32,7 +32,6 @@ import {
   generateIdeaId,
   getOrInitializeDonor,
   getOrInitializeWithdrawer,
-  getOrInitializeIdea,
   getIdea,
   createCampaign,
   getCampaign,
@@ -50,7 +49,8 @@ import {
   updateIdeaText,
   updateIdeaType,
   updateIdeaParent,
-  updateIdeaParentIndex
+  updateIdeaParentIndex,
+  updateIdeaPosition
 } from "../generated/UncrashableEntityHelpers"
 
 export function handleGreetingChange(event: GreetingChange): void {
@@ -257,6 +257,8 @@ export function handleCreateIdea(event: CreateIdeaEvent): void {
     ideaType: event.params.ideaType,
     text: event.params.text,
     campaign: campaign.id,
+    x: event.params.x,
+    y: event.params.y
   });
 
   // return ideaId;
@@ -316,6 +318,15 @@ export function handleUpdateIdeaParent(event: UpdateIdeaParentEvent): void {
     parentId: event.params.parentId, // grandchildId
     parentIndex: newChildren.length - 1, // 0
   });
+}
+
+export function handleUpdateIdeaPosition(event: UpdateIdeaPositionEvent): void {
+
+  updateIdeaPosition(event.params.ideaId, {
+    x: event.params.x,
+    y: event.params.y,
+  });
+
 }
 
 /**

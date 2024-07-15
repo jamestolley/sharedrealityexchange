@@ -1,9 +1,10 @@
-// import { useCallback } from 'react';
+
 import { Handle, Position } from 'reactflow';
-
-import { EditableTextArea } from './EditableText';
-
-// import './idea-node.module.css'; // they are now in global.css
+// import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useSharedRealityWriteContract } from "~~/hooks/useSharedRealityWriteContract";
+// import { notification } from "~~/utils/scaffold-eth";
+// import getErrorMessage from "~~/components/GetErrorMessage";
+import { EditableTextArea } from "~~/components/EditableText";
 
 export const colors = {
   "con": '#7e000e',
@@ -11,19 +12,6 @@ export const colors = {
   "top": '#e76b00',
   "pro": '#001031',
 };
-
-// type HandleStyles = {
-//   bottom?: number;
-//   zIndex: number;
-//   left?: string,
-//   backgroundColor: string,
-//   borderRadius: number,
-//   border: string | number,
-//   width: number,
-//   height: number,
-//   top?: number,
-// };
-
 
 const handleStyles = {
   bottom: -2,
@@ -58,17 +46,52 @@ const ideaStyle = {
   width: 250,
   boxShadow: '0 0 6px #555',
   color: '#3b3b3b',
-  // fontFamily: "Georgia, 'Times New Roman', Times, serif",
   padding: 6,
   lineHeight: 1.5,
   fontSize: 14,
   height: 'auto',
   minHeight: 35,
+  backgroundColor: 'white'
 };
 
-function TextUpdaterNode({ data, isConnectable }) {
+function IdeaNode({ data, isConnectable }) {
+
+  const { writeSharedRealityContractAsync } = useSharedRealityWriteContract();
 
   const topHandleStyle = topHandleStyles[data.type ? data.type : "part"];
+
+  const onUpdate = async (text) => {
+    if (text != data.label) {
+      // try {
+      //   await writeSharedRealityContractAsync(
+      //     {
+      //       functionName: "updateIdeaText",
+      //       args: [ data.campaignId, data.id, text.trim() ],
+      //     },
+      //     {
+      //       onBlockConfirmation: txnReceipt => {
+      //         console.log("📦 Transaction blockHash", txnReceipt);
+      //         notification.success("Idea text updated", { position: "top-right", duration: 6000 });
+      //         data.label = text; // for if it's edited again before refetch
+      //         setTimeout(data.refetch, 1000);
+      //       },
+      //     },
+      //   );
+      // } catch (error) {
+      //   console.error(error);
+      //   const message = getErrorMessage(error);
+      //   notification.error(message, { position: "top-right", duration: 6000 });
+      // }
+      writeSharedRealityContractAsync({
+        functionName: "updateIdeaText",
+        args: [ data.campaignId, data.id, text.trim() ],
+        callback: () => {
+          data.label = text; // for if it's edited again before refetch
+          // setTimeout(data.refetch, 1000);
+        }
+      });
+    }
+  };
 
   return (
     <div className="idea-node" style={ideaStyle} onClick={data.onClick}>
@@ -80,7 +103,7 @@ function TextUpdaterNode({ data, isConnectable }) {
         style={topHandleStyle}
       />}
       <div>
-        <EditableTextArea initialText={data.label} className="nodrag" />
+        <EditableTextArea initialText={data.label} onUpdate={onUpdate} className="nodrag" />
       </div>
       <Handle
         type="source"
@@ -107,4 +130,4 @@ function TextUpdaterNode({ data, isConnectable }) {
   );
 }
 
-export default TextUpdaterNode;
+export default IdeaNode;

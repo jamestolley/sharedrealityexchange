@@ -109,7 +109,7 @@ export const CampaignDisplay = (campaign: CampaignDisplayProps) => {
       {/* <label className="text-lg font-bold underline">Title</label>
       <p className="mt-0 mb-1 text-xl">{userIsOwner ? <EditableTextField onUpdate={(text: string) => onFieldUpdate('title', text)} initialText={campaign.title} className="w-full" /> : campaign.title}</p> */}
 
-      <label className="text-lg font-bold underline">Claim</label>
+      {/* <label className="text-lg font-bold underline">Claim</label>
       <div className="mt-0 mb-1 text-xl">
         {userIsOwner ? (
           <EditableTextField
@@ -120,7 +120,7 @@ export const CampaignDisplay = (campaign: CampaignDisplayProps) => {
         ) : (
           campaign.claim
         )}
-      </div>
+      </div> */}
 
       <label className="text-lg font-bold underline">Description</label>
       <div className="mt-0 mb-1 text-xl">

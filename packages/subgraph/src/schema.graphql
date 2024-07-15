@@ -88,5 +88,7 @@ type Idea @entity {
     children: [String!]!
     ideaType: Int!
     text: String!
+    x: Int!
+    y: Int!
     campaign: Campaign!
 }

@@ -6,6 +6,7 @@ import { CampaignDisplay } from "../_components/CampaignDisplay";
 import { CampaignDonate } from "../_components/CampaignDonate";
 import { CampaignsDonationsList } from "../_components/CampaignDonations";
 import { CampaignsFollowsList } from "../_components/CampaignFollows";
+// import { CampaignsDebug } from "../_components/CampaignDebug";
 import { CampaignsUpdatesList } from "../_components/CampaignUpdates";
 import { CampaignWithdraw } from "../_components/CampaignWithdraw";
 import { CampaignsWithdrawalsList } from "../_components/CampaignWithdrawals";
@@ -85,7 +86,7 @@ const CampaignDetail: NextPage = () => {
   });
 
   if (data) {
-    console.log("data!!", data);
+    console.log("campaign page data", data);
   }
 
   if (isNaN(parseInt(campaignId))) {
@@ -343,6 +344,21 @@ const CampaignDetail: NextPage = () => {
                 setPageNum={setFollowsPageNum}
               />
             </div>
+            <input
+              type="radio"
+              name="campaign_tabs"
+              role="tab"
+              className="tab"
+              aria-label="Debug"
+              defaultChecked={tabIndex == 6}
+              onClick={() => setTabIndex(6)}
+            />
+            {/* <div role="tabpanel" className="tab-content bg-base-100 border-base-300 rounded-box p-6">
+              <CampaignsDebug
+                loading={loading}
+                campaign={campaign}
+              />
+            </div> */}
           </div>
         </div>
       </>

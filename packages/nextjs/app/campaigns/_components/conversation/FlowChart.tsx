@@ -37,7 +37,7 @@ export const FlowChart = ({ campaign, ideas, refetch }: FlowChartProps) => {
   return (
     <div
       className="table text-xl bg-base-100 table-zebra w-full md:table-md table-sm"
-      style={{ textAlign: "center", height: "60vh", padding: 20 }}
+      style={{ textAlign: "center", padding: 20 }}
     >
       <ConversationTree campaign={campaign} ideas={ideas} refetch={refetch} />
     </div>

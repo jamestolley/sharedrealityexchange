@@ -68,6 +68,10 @@ entitySettings:
         fields:
           - parentId
           - parentIndex
+      - name: updateIdeaPosition
+        fields:
+          - x
+          - y
       - name: updateIdeaParentIndex
         fields:
           - parentIndex

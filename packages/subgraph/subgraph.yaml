@@ -9,7 +9,7 @@ dataSources:
     network: localhost
     source:
       abi: YourContract
-      address: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+      address: "0x68B1D87F95878fE05B998F19b66F4baba5De1aed"
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -29,7 +29,7 @@ dataSources:
     network: localhost
     source:
       abi: SharedRealityExchange
-      address: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+      address: "0x3Aa5ebB10DC797CAC828524e59A333d0A371443c"
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -68,10 +68,12 @@ dataSources:
           handler: handleUnfollow
         - event: CampaignUpdate(uint32,address,string,string)
           handler: handleCampaignUpdate
-        - event: CreateIdea(uint32,uint32,string,uint8,string)
+        - event: CreateIdea(uint32,uint32,string,uint8,string,int32,int32)
           handler: handleCreateIdea
         - event: UpdateIdeaParent(uint32,string,string)
           handler: handleUpdateIdeaParent
+        - event: UpdateIdeaPosition(uint32,string,int32,int32)
+          handler: handleUpdateIdeaPosition
         - event: UpdateIdeaText(uint32,string,string)
           handler: handleUpdateIdeaText
         - event: UpdateIdeaType(uint32,string,uint8)

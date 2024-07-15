@@ -15,6 +15,7 @@ import {
   Unfollow as UnfollowEvent,
   CreateIdea as CreateIdeaEvent,
   UpdateIdeaParent as UpdateIdeaParentEvent,
+  UpdateIdeaPosition as UpdateIdeaPositionEvent,
   UpdateIdeaText as UpdateIdeaTextEvent,
   UpdateIdeaType as UpdateIdeaTypeEvent,
   DeleteIdea as DeleteIdeaEvent
@@ -35,6 +36,7 @@ import {
   handleUpdateIdeaText,
   handleUpdateIdeaType,
   handleUpdateIdeaParent,
+  handleUpdateIdeaPosition,
   handleDeleteIdea
 } from "../src/mapping";
 
@@ -237,7 +239,7 @@ describe("Shared Reality Exchange", () => {
 
   });
 
-  test("updateIdea text and type", () => {
+  test("updateIdea text, type, and position", () => {
 
     //
     // test that the claim was stored properly
@@ -267,6 +269,8 @@ describe("Shared Reality Exchange", () => {
       assert.equals(ethereum.Value.fromI32(claim.children.length), ethereum.Value.fromI32(0));
       assert.fieldEquals("Idea", claim.id, "ideaType", "0");
       assert.fieldEquals("Idea", claim.id, "text", "idea text");
+      assert.fieldEquals("Idea", claim.id, "x", "0");
+      assert.fieldEquals("Idea", claim.id, "y", "0");
 
       assert.entityCount("Idea", 1);
 
@@ -279,6 +283,9 @@ describe("Shared Reality Exchange", () => {
       const updateIdeaTypeEvent = createUpdateIdeaTypeEvent(0, claim.id, 2);
       handleUpdateIdeaType(updateIdeaTypeEvent);
 
+      const updateIdeaPositionEvent = createUpdateIdeaPositionEvent(0, claim.id, 100, 200);
+      handleUpdateIdeaPosition(updateIdeaPositionEvent);
+
       const updatedClaim = Idea.load(claim.id);
       if (updatedClaim) {
         assert.fieldEquals("Idea", updatedClaim.id, "parentId", "0x0000000000000000000000000000000000000000");
@@ -286,6 +293,8 @@ describe("Shared Reality Exchange", () => {
         assert.equals(ethereum.Value.fromI32(updatedClaim.children.length), ethereum.Value.fromI32(0));
         assert.fieldEquals("Idea", updatedClaim.id, "ideaType", "2");
         assert.fieldEquals("Idea", updatedClaim.id, "text", "updated idea text");
+        assert.fieldEquals("Idea", updatedClaim.id, "x", "100");
+        assert.fieldEquals("Idea", updatedClaim.id, "y", "200");
 
         // logStore();
         
@@ -1071,12 +1080,16 @@ export function createIdeaEvent(nonce: u32, campaignId: u32, parentId: string, i
   let parentIdParam = new ethereum.EventParam("parentId", ethereum.Value.fromString(parentId))
   let ideaTypeParam = new ethereum.EventParam("ideaType", ethereum.Value.fromI32(ideaType))
   let textParam = new ethereum.EventParam("text", ethereum.Value.fromString(text))
+  let xParam = new ethereum.EventParam("x", ethereum.Value.fromI32(0))
+  let yParam = new ethereum.EventParam("y", ethereum.Value.fromI32(0))
 
   createIdeaEvent.parameters.push(nonceParam)
   createIdeaEvent.parameters.push(campaignIdParam)
   createIdeaEvent.parameters.push(parentIdParam)
   createIdeaEvent.parameters.push(ideaTypeParam)
   createIdeaEvent.parameters.push(textParam)
+  createIdeaEvent.parameters.push(xParam)
+  createIdeaEvent.parameters.push(yParam)
 
   return createIdeaEvent
 }
@@ -1127,6 +1140,24 @@ export function createUpdateIdeaParentEvent(campaignId: u32, ideaId: string, new
   updateIdeaParentEvent.parameters.push(newParentParam)
 
   return updateIdeaParentEvent
+}
+
+// @ts-ignore
+export function createUpdateIdeaPositionEvent(campaignId: u32, ideaId: string, x: i32, y: i32): UpdateIdeaPositionEvent {
+  let updateIdeaPositionEvent = changetype<UpdateIdeaPositionEvent>(newMockEvent())
+  updateIdeaPositionEvent.parameters = new Array()
+
+  let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
+  let ideaIdParam = new ethereum.EventParam("ideaId", ethereum.Value.fromString(ideaId))
+  let xParam = new ethereum.EventParam("x", ethereum.Value.fromI32(x))
+  let yParam = new ethereum.EventParam("y", ethereum.Value.fromI32(y))
+
+  updateIdeaPositionEvent.parameters.push(campaignIdParam)
+  updateIdeaPositionEvent.parameters.push(ideaIdParam)
+  updateIdeaPositionEvent.parameters.push(xParam)
+  updateIdeaPositionEvent.parameters.push(yParam)
+
+  return updateIdeaPositionEvent
 }
 
 // @ts-ignore

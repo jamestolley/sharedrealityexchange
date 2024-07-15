@@ -113,8 +113,8 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		string parentId,
 		IdeaType ideaType,
 		string text,
-		uint16 x,
-		uint16 y
+		int32 x,
+		int32 y
 	);
 
     // edits the old parent, some of the old parent's other children, and the new parent
@@ -128,8 +128,8 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 	event UpdateIdeaPosition(
 		uint32 campaignId,
 		string ideaId,
-		uint16 x,
-		uint16 y
+		int32 x,
+		int32 y
 	);
 
 	// just edits the one entity in the graph database
@@ -324,7 +324,7 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		emit CampaignUpdate(_campaignId, campaign.owner, _title, _content);
 	}
 
-	function createIdea(uint32 _campaignId, string memory _parentId, IdeaType _ideaType, string calldata _text, uint16 x, uint16 y) public {
+	function createIdea(uint32 _campaignId, string memory _parentId, IdeaType _ideaType, string calldata _text, int32 x, int32 y) public {
 		
 		require(campaigns.length > _campaignId, "Campaign not found");
 
@@ -358,7 +358,7 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		emit UpdateIdeaParent(_campaignId, _ideaId, _parentId);
 	}
 
-	function updateIdeaPosition(uint32 _campaignId, string calldata _ideaId, uint16 x, uint16 y) public {
+	function updateIdeaPosition(uint32 _campaignId, string calldata _ideaId, int32 x, int32 y) public {
 
 		require(campaigns.length > _campaignId, "Campaign not found");
 

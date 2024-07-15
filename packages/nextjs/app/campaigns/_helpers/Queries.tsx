@@ -31,6 +31,8 @@ export const GQL_CAMPAIGN_by_campaignId = () => {
         children
         ideaType
         text
+        x
+        y
       }
       campaignUpdates(
         orderBy: createdAt
@@ -82,6 +84,7 @@ export const GQL_CAMPAIGN_by_campaignId = () => {
         skip: $followsOffset
         where: { campaign_: { campaignId: $campaignId } }
       ) {
+        id
         user
         createdAt
       }
