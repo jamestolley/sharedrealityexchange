@@ -15,6 +15,16 @@ const IdeaType: {
   Part: 3,
 };
 
+const SpecialistGroupStatus: {
+  Active: 0;
+  Inactice: 1;
+  Deleted: 2;
+} = {
+  Active: 0,
+  Inactice: 1,
+  Deleted: 2,
+};
+
 describe("SharedRealityExchange", function () {
   // We define a fixture to reuse the same setup in every test.
 
@@ -252,6 +262,130 @@ describe("SharedRealityExchange", function () {
           .to.emit(sharedRealityExchange, "Unfollow")
           .withArgs(0, deployer.address);
       });
+    });
+
+    describe("Specialist groups", function () {
+      it("Should be able to create one", async function () {
+        let groupId;
+        const name = "name";
+        const specification = "specification";
+
+        await expect(
+          (groupId = await sharedRealityExchange.createSpecialistGroup(deployer.address, name, specification)),
+        )
+          .to.emit(sharedRealityExchange, "CreateSpecialistGroup")
+          .withArgs(0, deployer.address, name, specification);
+
+        expect(groupId.value).to.equal(0);
+
+        const group = await sharedRealityExchange.specialistGroups(groupId.value);
+
+        expect(group[0]).to.equal(deployer);
+        expect(group[1]).to.equal(SpecialistGroupStatus.Active);
+        expect(group[2]).to.equal(name);
+        expect(group[3]).to.equal(specification);
+
+        // owner of the group must be a group member
+        expect(await sharedRealityExchange.specialistGroupMembers(0, deployer.address)).to.equal(true);
+      });
+
+      it("Should be able to add, remove, and vouch for members", async function () {
+        const comments = "comments";
+        const url = "http://example.com";
+
+        expect(await sharedRealityExchange.specialistGroupMembers(0, nonOwner)).to.equal(false);
+
+        await expect(await sharedRealityExchange.addSpecialistToGroup(0, nonOwner, comments, url))
+          .to.emit(sharedRealityExchange, "SpecialistAddedToGroup")
+          .withArgs(0, deployer, nonOwner, comments, url);
+
+        expect(await sharedRealityExchange.specialistGroupMembers(0, nonOwner)).to.equal(true);
+
+        await expect(await sharedRealityExchange.vouchForSpecialist(0, nonOwner, comments, url))
+          .to.emit(sharedRealityExchange, "VouchForSpecialist")
+          .withArgs(0, deployer, nonOwner, comments, url);
+
+        await expect(await sharedRealityExchange.removeSpecialistFromGroup(0, nonOwner, comments, url))
+          .to.emit(sharedRealityExchange, "SpecialistRemovedFromGroup")
+          .withArgs(0, deployer, nonOwner, comments, url);
+
+        expect(await sharedRealityExchange.specialistGroupMembers(0, nonOwner)).to.equal(false);
+      });
+
+      it("Should be able to add it to and remove it from a campaign", async function () {
+        const comments = "comments";
+
+        expect(await sharedRealityExchange.campaignSpecialistGroups(0, 0)).to.equal(false);
+
+        await expect(await sharedRealityExchange.addSpecialistGroupToCampaign(0, 0, comments))
+          .to.emit(sharedRealityExchange, "SpecialistGroupAddedToCampaign")
+          .withArgs(0, 0, deployer, comments);
+
+        expect(await sharedRealityExchange.campaignSpecialistGroups(0, 0)).to.equal(true);
+
+        await expect(await sharedRealityExchange.removeSpecialistGroupFromCampaign(0, 0, comments))
+          .to.emit(sharedRealityExchange, "SpecialistGroupRemovedFromCampaign")
+          .withArgs(0, 0, deployer, comments);
+
+        expect(await sharedRealityExchange.campaignSpecialistGroups(0, 0)).to.equal(false);
+      });
+
+      it("Should be able to edit the name, status, specification, and owner", async function () {
+        const newName = "new name";
+        const newSpec = "new spec";
+
+        await expect(await sharedRealityExchange.updateSpecialistGroupName(0, newName))
+          .to.emit(sharedRealityExchange, "SpecialistGroupNameUpdated")
+          .withArgs(0, newName);
+
+        await expect(await sharedRealityExchange.updateSpecialistGroupStatus(0, 1))
+          .to.emit(sharedRealityExchange, "SpecialistGroupStatusUpdated")
+          .withArgs(0, 1);
+
+        await expect(await sharedRealityExchange.updateSpecialistGroupSpecification(0, newSpec))
+          .to.emit(sharedRealityExchange, "SpecialistGroupSpecificationUpdated")
+          .withArgs(0, newSpec);
+
+        await expect(await sharedRealityExchange.updateSpecialistGroupOwner(0, nonOwner))
+          .to.emit(sharedRealityExchange, "SpecialistGroupOwnerUpdated")
+          .withArgs(0, nonOwner);
+
+        const group = await sharedRealityExchange.specialistGroups(0);
+
+        expect(group[0]).to.equal(nonOwner);
+        expect(group[1]).to.equal(SpecialistGroupStatus.Inactice);
+        expect(group[2]).to.equal(newName);
+        expect(group[3]).to.equal(newSpec);
+      });
+
+      // it("Should be able to delete", async function () {
+
+      //   const group = await sharedRealityExchange.specialistGroups(0);
+
+      //   expect(group[0]).to.equal(nonOwner);
+      //   expect(group[1]).to.equal(SpecialistGroupStatus.Active);
+      //   expect(group[2]).to.equal(name);
+      //   expect(group[3]).to.equal(specification);
+
+      //   await expect(await sharedRealityExchange.updateSpecialistGroupName(0, newName))
+      //     .to.emit(sharedRealityExchange, "SpecialistGroupNameUpdated")
+      //     .withArgs(0, newName);
+
+      //   await expect(await sharedRealityExchange.updateSpecialistGroupSpecification(0, newSpec))
+      //     .to.emit(sharedRealityExchange, "SpecialistGroupSpecificationUpdated")
+      //     .withArgs(0, newSpec);
+
+      //   await expect(await sharedRealityExchange.updateSpecialistGroupOwner(0, nonOwner))
+      //     .to.emit(sharedRealityExchange, "SpecialistGroupOwnerUpdated")
+      //     .withArgs(0, nonOwner);
+
+      //   const group2 = await sharedRealityExchange.specialistGroups(0);
+
+      //   expect(group2[0]).to.equal(nonOwner);
+      //   expect(group2[1]).to.equal(SpecialistGroupStatus.Active);
+      //   expect(group2[2]).to.equal(newName);
+      //   expect(group2[3]).to.equal(newSpec);
+      // });
     });
   });
 });

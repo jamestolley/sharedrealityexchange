@@ -40,8 +40,24 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		Part
 	}
 
+	enum SpecialistGroupStatus {
+		Active,
+		Inactive,
+		Deleted
+	}
+
+	struct SpecialistGroup {
+		address owner;
+		SpecialistGroupStatus status;
+		string name;
+		string specification;
+	}
+
 	Campaign[] public campaigns;
+	SpecialistGroup[] public specialistGroups;
 	mapping(address => DonorHistory) public donations;
+	mapping(uint32 => mapping(address => bool)) public specialistGroupMembers;
+	mapping(uint32 => mapping(uint32 => bool)) public campaignSpecialistGroups;
 
 	// just to make unique ideaIds in my tests
 	uint32 ideaNonce;
@@ -150,6 +166,78 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 	event DeleteIdea(
 		uint32 campaignId,
 		string ideaId
+	);
+
+	event CreateSpecialistGroup(
+		uint32 groupId,
+		address owner,
+		string name,
+		string specification
+	);
+	
+	event SpecialistGroupOwnerUpdated(
+		uint32 groupId,
+		address owner
+	);
+
+	event SpecialistGroupNameUpdated(
+		uint32 groupId,
+		string name
+	);
+
+	event SpecialistGroupSpecificationUpdated(
+		uint32 groupId,
+		string specification
+	);
+
+	event SpecialistGroupStatusUpdated(
+		uint32 groupId,
+		SpecialistGroupStatus status
+	);
+
+	event DeleteSpecialistGroup(
+		uint32 groupId,
+		address sender,
+		string comments,
+		string evidenceUrl
+	);
+
+	event SpecialistAddedToGroup(
+		uint32 groupId,
+		address owner,
+		address memberId,
+		string comments,
+		string evidenceUrl
+	);
+
+	event SpecialistRemovedFromGroup(
+		uint32 groupId,
+		address owner,
+		address memberId,
+		string comments,
+		string evidenceUrl
+	);
+
+	event VouchForSpecialist(
+		uint32 groupId,
+		address voucher,
+		address vouchee,
+		string comments,
+		string evidenceUrl
+	);
+
+	event SpecialistGroupAddedToCampaign(
+		uint32 groupId,
+		uint32 campaignId,
+		address owner,
+		string comments
+	);
+
+	event SpecialistGroupRemovedFromCampaign(
+		uint32 groupId,
+		uint32 campaignId,
+		address owner,
+		string comments
 	);
 
 	constructor() Ownable() {}
@@ -412,6 +500,178 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		// require(campaign.parentId != "0x0000000000000000000000000000000000000000", "Cannot delete the claim");
 
 		emit DeleteIdea(_campaignId, _ideaId);
+	}
+
+	function createSpecialistGroup(address _owner, string calldata _name, string calldata _specification) public {
+
+		bytes32 baseCompare = keccak256("");
+		bytes32 nameCompare = keccak256(bytes(_name));
+		bytes32 specificationCompare = keccak256(bytes(_specification));
+		require(
+			nameCompare != baseCompare && specificationCompare != baseCompare,
+			"Name and Specification are required fields."
+		);
+
+		require(bytes(_name).length < 256, "The name is longer than 256 bytes");
+		require(bytes(_specification).length < 65536, "The specification is longer than 65536 bytes");
+
+		specialistGroups.push(SpecialistGroup({
+			owner: _owner,
+			status: SpecialistGroupStatus.Active,
+			name: _name,
+			specification: _specification
+		}));
+		uint32 groupId = uint32(specialistGroups.length - 1);
+
+		specialistGroupMembers[groupId][_owner] = true;
+
+		emit CreateSpecialistGroup(groupId, _owner, _name, _specification);
+	}
+
+	function updateSpecialistGroupOwner(uint32 _groupId, address _newOwner) public {
+
+		require(specialistGroups.length > _groupId, "Group not found");
+
+		SpecialistGroup storage group = specialistGroups[_groupId];
+
+		require(msg.sender == group.owner, "Caller is not the current owner");
+
+		group.owner = _newOwner;
+
+		emit SpecialistGroupOwnerUpdated(_groupId, group.owner);
+	}
+
+	function updateSpecialistGroupName(uint32 _groupId, string calldata _name) public {
+
+		require(specialistGroups.length > _groupId, "Group not found");
+
+		SpecialistGroup storage group = specialistGroups[_groupId];
+
+		require(msg.sender == group.owner, "Caller is not the current owner");
+
+		group.name = _name;
+
+		emit SpecialistGroupNameUpdated(_groupId, _name);
+	}
+
+	function updateSpecialistGroupSpecification(uint32 _groupId, string calldata _specification) public {
+
+		require(specialistGroups.length > _groupId, "Group not found");
+
+		SpecialistGroup storage group = specialistGroups[_groupId];
+
+		require(msg.sender == group.owner, "Caller is not the current owner");
+
+		group.specification = _specification;
+
+		emit SpecialistGroupSpecificationUpdated(_groupId, _specification);
+	}
+
+	function updateSpecialistGroupStatus(uint32 _groupId, SpecialistGroupStatus _status) public {
+
+		require(specialistGroups.length > _groupId, "Group not found");
+
+		SpecialistGroup storage group = specialistGroups[_groupId];
+
+		require(msg.sender == group.owner, "Caller is not the current owner");
+
+		group.status = _status;
+
+		emit SpecialistGroupStatusUpdated(_groupId, _status);
+	}
+
+	function deleteSpecialistGroup(uint32 _groupId, string calldata _comments, string calldata _evidenceUrl) public {
+
+		require(specialistGroups.length > _groupId, "Group not found");
+
+		SpecialistGroup storage group = specialistGroups[_groupId];
+
+		require(msg.sender == group.owner, "Caller is not the current owner");
+
+		group.status = SpecialistGroupStatus.Deleted;
+		// leave the membership mapping as it is
+
+		emit DeleteSpecialistGroup(_groupId, msg.sender, _comments, _evidenceUrl);
+
+	}
+	
+    function addSpecialistToGroup(uint32 _groupId, address _memberId, string calldata _comments, string calldata _evidenceUrl) public {
+
+		require(specialistGroups.length > _groupId, "Group not found");
+
+		require(!specialistGroupMembers[_groupId][_memberId], "The specialist is already a member of the group");
+
+		SpecialistGroup storage group = specialistGroups[_groupId];
+
+		require(msg.sender == group.owner, "Caller is not the current owner");
+
+		specialistGroupMembers[_groupId][_memberId] = true;
+
+		emit SpecialistAddedToGroup(_groupId, msg.sender, _memberId, _comments, _evidenceUrl);
+	}
+
+    function removeSpecialistFromGroup(uint32 _groupId, address _memberId, string calldata _comments, string calldata _evidenceUrl) public {
+
+		require(specialistGroups.length > _groupId, "Group not found");
+
+		require(specialistGroupMembers[_groupId][_memberId], "The specialist is not a member of the group");
+
+		SpecialistGroup storage group = specialistGroups[_groupId];
+
+		require(msg.sender == group.owner, "Caller is not the current owner");
+
+		require(_memberId != group.owner, "Cannot remove the current owner from the group");
+
+		delete specialistGroupMembers[_groupId][_memberId];
+
+		emit SpecialistRemovedFromGroup(_groupId, msg.sender, _memberId, _comments, _evidenceUrl);
+	}
+
+    function vouchForSpecialist(uint32 _groupId, address _vouchee, string calldata _comments, string calldata _evidenceUrl) public {
+
+		require(specialistGroups.length > _groupId, "Group not found");
+
+		require(specialistGroupMembers[_groupId][msg.sender], "The voucher is not a member of the group");
+
+		emit VouchForSpecialist(_groupId, msg.sender, _vouchee, _comments, _evidenceUrl);
+	}
+
+	function addSpecialistGroupToCampaign(uint32 _groupId, uint32 _campaignId, string calldata _comments) public {
+
+		require(specialistGroups.length > _groupId, "Group not found");
+		
+		require(campaigns.length > _campaignId, "Campaign not found");
+
+		SpecialistGroup storage group = specialistGroups[_groupId];
+
+		require(msg.sender == group.owner, "Caller is not the current owner");
+
+		require(group.status == SpecialistGroupStatus.Active, "Specialist group is not currently active");
+
+		require(!campaignSpecialistGroups[_campaignId][_groupId], "Specialist group has already been added to the campaign");
+
+		campaignSpecialistGroups[_campaignId][_groupId] = true;
+
+		emit SpecialistGroupAddedToCampaign(_groupId, _campaignId, msg.sender, _comments);
+	}
+
+    function removeSpecialistGroupFromCampaign(uint32 _campaignId, uint32 _groupId, string calldata _comments) public {
+
+		require(specialistGroups.length > _groupId, "Group not found");
+		
+		require(campaigns.length > _campaignId, "Campaign not found");
+
+		SpecialistGroup storage group = specialistGroups[_groupId];
+
+		require(msg.sender == group.owner, "Caller is not the current owner");
+
+		// require(group.status == SpecialistGroupStatus.Active, "Specialist group is not currently active");
+
+		require(campaignSpecialistGroups[_campaignId][_groupId], "Specialist group has not been added to the campaign");
+
+		delete campaignSpecialistGroups[_campaignId][_groupId];
+
+		emit SpecialistGroupRemovedFromCampaign(_groupId, _campaignId, msg.sender, _comments);
 	}
 
 }
