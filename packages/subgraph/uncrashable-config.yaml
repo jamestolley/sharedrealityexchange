@@ -114,9 +114,13 @@ entitySettings:
     entityId:
       - name: id
         type: Bytes
-#   OwnershipTransferred:
-#     useDefault: []
-#     setters: []
-#     entityId:
-#       - name: id
-#         type: Bytes
+  TruthRating:
+    useDefault: []
+    setters:
+      - name: updateTruthRating
+        fields:
+          - ratingScore
+          - comments
+    entityId:
+      - name: id
+        type: Bytes

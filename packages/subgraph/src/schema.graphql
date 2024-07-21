@@ -32,6 +32,7 @@ type Campaign @entity {
   updates: [CampaignUpdate]! @derivedFrom(field: "campaign")
   ideas: [Idea!]! @derivedFrom(field: "campaign")
   specialistGroupConnections: [SpecialistGroupCampaignConnection!]! @derivedFrom(field: "campaign")
+  truthRatings: [TruthRating!]! @derivedFrom(field: "campaign")
 }
 
 type Donation @entity(immutable: true) {
@@ -44,10 +45,10 @@ type Donation @entity(immutable: true) {
 }
 
 type Donor @entity {
-    id: ID!
-    donations: [Donation!]! @derivedFrom(field: "donor")
-    createdAt: BigInt!
-    donationCount: BigInt!
+  id: ID!
+  donations: [Donation!]! @derivedFrom(field: "donor")
+  createdAt: BigInt!
+  donationCount: BigInt!
 }
 
 type Withdrawal @entity(immutable: true) {
@@ -60,10 +61,10 @@ type Withdrawal @entity(immutable: true) {
 }
 
 type Withdrawer @entity {
-    id: ID!
-    donations: [Withdrawal!]! @derivedFrom(field: "withdrawer")
-    createdAt: BigInt!
-    withdrawalCount: BigInt!
+  id: ID!
+  donations: [Withdrawal!]! @derivedFrom(field: "withdrawer")
+  createdAt: BigInt!
+  withdrawalCount: BigInt!
 }
 
 type Follow @entity {
@@ -83,43 +84,56 @@ type CampaignUpdate @entity {
 }
 
 type Idea @entity {
-    id: ID!
-    parentId: String!
-    parentIndex: Int!
-    children: [String!]!
-    ideaType: Int!
-    text: String!
-    x: Int!
-    y: Int!
-    campaign: Campaign!
+  id: ID!
+  parentId: String!
+  parentIndex: Int!
+  children: [String!]!
+  ideaType: Int!
+  text: String!
+  x: Int!
+  y: Int!
+  campaign: Campaign!
+  truthRatings: [TruthRating!]! @derivedFrom(field: "idea")
 }
 
 type SpecialistGroup @entity {
-    id: ID!
-    groupId: Int!
-    owner: Bytes! # address
-    status: Int!
-    name: String!
-    specification: String!
-    memberships: [SpecialistGroupMembership!]! @derivedFrom(field: "group")
-    createdAt: BigInt!
+  id: ID!
+  groupId: Int!
+  owner: Bytes! # address
+  status: Int!
+  name: String!
+  specification: String!
+  memberships: [SpecialistGroupMembership!]! @derivedFrom(field: "group")
+  createdAt: BigInt!
+  truthRatings: [TruthRating!]! @derivedFrom(field: "group")
 }
 
 type SpecialistGroupMembership @entity {
-    id: ID!
-    owner: Bytes! # address
-    member: Bytes! # address
-    group: SpecialistGroup!
-    comments: String!
-    evidenceUrl: String!
-    createdAt: BigInt!
+  id: ID!
+  owner: Bytes! # address
+  member: Bytes! # address
+  group: SpecialistGroup!
+  comments: String!
+  evidenceUrl: String!
+  createdAt: BigInt!
 }
 
 type SpecialistGroupCampaignConnection @entity {
-    id: ID!
-    owner: Bytes! # address
-    campaign: Campaign!
-    group: SpecialistGroup!
-    comments: String!
-    createdAt: BigInt!
+  id: ID!
+  owner: Bytes! # address
+  campaign: Campaign!
+  group: SpecialistGroup!
+  comments: String!
+  createdAt: BigInt!
+}
+
+type TruthRating @entity {
+  id: ID!
+  campaign: Campaign!
+  group: SpecialistGroup!
+  idea: Idea!
+  rater: String!
+  ratingScore: Int! # 0-10 maps to: 0.0 - 5.0 in half-steps (divide by 2 for the actual rating value)
+  comments: String!
+  createdAt: BigInt!
 }

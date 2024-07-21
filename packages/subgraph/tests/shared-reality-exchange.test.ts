@@ -28,7 +28,10 @@ import {
   SpecialistAddedToGroup as SpecialistAddedToGroupEvent,
   SpecialistRemovedFromGroup as SpecialistRemovedFromGroupEvent,
   SpecialistGroupAddedToCampaign as SpecialistGroupAddedToCampaignEvent,
-  SpecialistGroupRemovedFromCampaign as SpecialistGroupRemovedFromCampaignEvent
+  SpecialistGroupRemovedFromCampaign as SpecialistGroupRemovedFromCampaignEvent,
+  TruthRatingCreated as TruthRatingCreatedEvent,
+  TruthRatingUpdated as TruthRatingUpdatedEvent,
+  TruthRatingDeleted as TruthRatingDeletedEvent
 } from "../generated/SharedRealityExchange/SharedRealityExchange";
 import {
   handleCampaignCreated,
@@ -60,7 +63,9 @@ import {
   handleSpecialistRemovedFromGroup,
   handleSpecialistGroupAddedToCampaign,
   handleSpecialistGroupRemovedFromCampaign,
-  getSpecialistGroupMembershipId
+  handleTruthRatingCreated,
+  handleTruthRatingUpdated,
+  handleTruthRatingDeleted
 } from "../src/mapping";
 import { getCampaign } from "../generated/UncrashableEntityHelpers";
 
@@ -1139,6 +1144,77 @@ describe("Shared Reality Exchange", () => {
           assert.fieldEquals("SpecialistGroupCampaignConnection", connection.id, "group", getSpecialistGroupId(0));
           assert.fieldEquals("SpecialistGroupCampaignConnection", connection.id, "comments", "comments");
   
+          // TruthRating tests
+
+          assert.entityCount("TruthRating", 0);
+
+          // create a truth rating
+
+          const addRatingEvent = createTruthRatingCreatedEvent(0, 0, "0x0123456789abcdef", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", 4, "comments");
+          handleTruthRatingCreated(addRatingEvent);
+
+          assert.entityCount("TruthRating", 1);
+
+          const ratingCampaign = getCampaign(getCampaignId(0));
+          assert.assertNotNull(
+            ratingCampaign,
+              "Loaded Campaign should not be null"
+          );
+          if (ratingCampaign) {
+            const truthRatings = campaign2.truthRatings.load();
+            assert.equals(ethereum.Value.fromI32(1), ethereum.Value.fromI32(truthRatings.length));
+            
+            const rating = truthRatings[0];
+    
+            if (rating) {
+    
+              assert.fieldEquals("TruthRating", rating.id, "campaign", getCampaignId(0));
+              assert.fieldEquals("TruthRating", rating.id, "group", getSpecialistGroupId(0));
+              assert.fieldEquals("TruthRating", rating.id, "idea", "0x0123456789abcdef");
+              // assert.fieldEquals("TruthRating", rating.id, "rater", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+              assert.fieldEquals("TruthRating", rating.id, "ratingScore", "4");
+              assert.fieldEquals("TruthRating", rating.id, "comments", "comments");
+
+              // update a truth rating
+              const updateRatingEvent = createTruthRatingUpdatedEvent(0, 0, "0x0123456789abcdef", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", 5, "comments!");
+              handleTruthRatingUpdated(updateRatingEvent);
+
+              const updateCampaign = getCampaign(getCampaignId(0));
+              assert.assertNotNull(
+                updateCampaign,
+                  "Loaded Campaign should not be null"
+              );
+              if (updateCampaign) {
+                const truthRatings = updateCampaign.truthRatings.load();
+                assert.equals(ethereum.Value.fromI32(1), ethereum.Value.fromI32(truthRatings.length));
+    
+                assert.fieldEquals("TruthRating", rating.id, "campaign", getCampaignId(0));
+                assert.fieldEquals("TruthRating", rating.id, "group", getSpecialistGroupId(0));
+                assert.fieldEquals("TruthRating", rating.id, "idea", "0x0123456789abcdef");
+                // assert.fieldEquals("TruthRating", rating.id, "rater", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+                assert.fieldEquals("TruthRating", rating.id, "ratingScore", "5");
+                assert.fieldEquals("TruthRating", rating.id, "comments", "comments!");
+  
+                // delete a truth rating
+                const deleteRatingEvent = createTruthRatingDeletedEvent(0, 0, "0x0123456789abcdef", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+                handleTruthRatingDeleted(deleteRatingEvent);
+
+                assert.entityCount("TruthRating", 0);
+              }
+              else {
+                assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+              }
+            }
+            else {
+              assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+            }
+
+            // assert.entityCount("TruthRating", 0);
+          }
+          else {
+            assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+          }
+
           // remove the group from the campaign
           const removeEvent = createSpecialistGroupRemovedFromCampaignEvent(0, 0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "comments");
           handleSpecialistGroupRemovedFromCampaign(removeEvent);
@@ -1716,12 +1792,75 @@ export function createSpecialistGroupOwnerUpdatedEvent(groupId: u32, owner: stri
 
   // let theCampaignId = getCampaignId(campaignId)
   let groupIdParam = new ethereum.EventParam("groupId", ethereum.Value.fromI32(groupId))
-  let sownerParam = new ethereum.EventParam("owner", ethereum.Value.fromAddress(Address.fromString(owner)))
+  let ownerParam = new ethereum.EventParam("owner", ethereum.Value.fromAddress(Address.fromString(owner)))
 
   event.parameters.push(groupIdParam)
-  event.parameters.push(sownerParam)
+  event.parameters.push(ownerParam)
 
   return event
 }
 
+export function createTruthRatingCreatedEvent(campaignId: u32, groupId: u32, ideaId: string, owner: string, ratingScore: u8, comments: string): TruthRatingCreatedEvent {
+  // @ts-ignore
+  let event = changetype<TruthRatingCreatedEvent>(newMockEvent())
+  event.parameters = new Array()
 
+  // let theCampaignId = getCampaignId(campaignId)
+  let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
+  let groupIdParam = new ethereum.EventParam("groupId", ethereum.Value.fromI32(groupId))
+  let ideaIdParam = new ethereum.EventParam("ideaId", ethereum.Value.fromString(ideaId))
+  let ownerParam = new ethereum.EventParam("owner", ethereum.Value.fromAddress(Address.fromString(owner)))
+  let ratingScoreParam = new ethereum.EventParam("ratingScore", ethereum.Value.fromI32(ratingScore))
+  let commentsParam = new ethereum.EventParam("comments", ethereum.Value.fromString(comments))
+
+  event.parameters.push(campaignIdParam)
+  event.parameters.push(groupIdParam)
+  event.parameters.push(ideaIdParam)
+  event.parameters.push(ownerParam)
+  event.parameters.push(ratingScoreParam)
+  event.parameters.push(commentsParam)
+
+  return event
+}
+
+export function createTruthRatingUpdatedEvent(campaignId: u32, groupId: u32, ideaId: string, owner: string, ratingScore: u8, comments: string): TruthRatingUpdatedEvent {
+  // @ts-ignore
+  let event = changetype<TruthRatingUpdatedEvent>(newMockEvent())
+  event.parameters = new Array()
+
+  // let theCampaignId = getCampaignId(campaignId)
+  let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
+  let groupIdParam = new ethereum.EventParam("groupId", ethereum.Value.fromI32(groupId))
+  let ideaIdParam = new ethereum.EventParam("ideaId", ethereum.Value.fromString(ideaId))
+  let ownerParam = new ethereum.EventParam("owner", ethereum.Value.fromAddress(Address.fromString(owner)))
+  let ratingScoreParam = new ethereum.EventParam("ratingScore", ethereum.Value.fromI32(ratingScore))
+  let commentsParam = new ethereum.EventParam("comments", ethereum.Value.fromString(comments))
+
+  event.parameters.push(campaignIdParam)
+  event.parameters.push(groupIdParam)
+  event.parameters.push(ideaIdParam)
+  event.parameters.push(ownerParam)
+  event.parameters.push(ratingScoreParam)
+  event.parameters.push(commentsParam)
+
+  return event
+}
+
+export function createTruthRatingDeletedEvent(campaignId: u32, groupId: u32, ideaId: string, owner: string): TruthRatingDeletedEvent {
+  // @ts-ignore
+  let event = changetype<TruthRatingDeletedEvent>(newMockEvent())
+  event.parameters = new Array()
+
+  // let theCampaignId = getCampaignId(campaignId)
+  let campaignIdParam = new ethereum.EventParam("campaignId", ethereum.Value.fromI32(campaignId))
+  let groupIdParam = new ethereum.EventParam("groupId", ethereum.Value.fromI32(groupId))
+  let ideaIdParam = new ethereum.EventParam("ideaId", ethereum.Value.fromString(ideaId))
+  let ownerParam = new ethereum.EventParam("owner", ethereum.Value.fromAddress(Address.fromString(owner)))
+
+  event.parameters.push(campaignIdParam)
+  event.parameters.push(groupIdParam)
+  event.parameters.push(ideaIdParam)
+  event.parameters.push(ownerParam)
+
+  return event
+}

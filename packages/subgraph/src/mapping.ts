@@ -28,7 +28,10 @@ import {
   SpecialistAddedToGroup as SpecialistAddedToGroupEvent,
   SpecialistRemovedFromGroup as SpecialistRemovedFromGroupEvent,
   SpecialistGroupAddedToCampaign as SpecialistGroupAddedToCampaignEvent,
-  SpecialistGroupRemovedFromCampaign as SpecialistGroupRemovedFromCampaignEvent
+  SpecialistGroupRemovedFromCampaign as SpecialistGroupRemovedFromCampaignEvent,
+  TruthRatingCreated as TruthRatingCreatedEvent,
+  TruthRatingUpdated as TruthRatingUpdatedEvent,
+  TruthRatingDeleted as TruthRatingDeletedEvent
 } from "../generated/SharedRealityExchange/SharedRealityExchange";
 import { Greeting, Sender, Idea, Campaign } from "../generated/schema";
 import {
@@ -73,7 +76,10 @@ import {
   getSpecialistGroup,
   getSpecialistGroupMembership,
   createSpecialistGroupCampaignConnection,
-  getSpecialistGroupCampaignConnection
+  getSpecialistGroupCampaignConnection,
+  generateTruthRatingId,
+  createTruthRating,
+  updateTruthRating
 } from "../generated/UncrashableEntityHelpers"
 
 export function handleGreetingChange(event: GreetingChange): void {
@@ -594,6 +600,51 @@ export function handleSpecialistGroupRemovedFromCampaign(event: SpecialistGroupR
   store.remove("SpecialistGroupCampaignConnection", connectionId)
 }
 
+/** TruthRatings */
+
+export function handleTruthRatingCreated(event: TruthRatingCreatedEvent): void {
+
+  // load the campaign
+  const campaignId = getCampaignId(event.params.campaignId.toU32());
+  const campaign = getCampaign(campaignId);
+
+  // load the group
+  const groupId = getSpecialistGroupId(event.params.groupId.toU32());
+  const group = getSpecialistGroup(groupId);
+
+  // load the idea
+  // const idea = Idea.load(event.params.ideaId);
+  
+  const truthRatingId = getTruthRatingId(event.params.campaignId.toU32(), event.params.groupId.toU32(), event.params.ideaId, event.params.owner.toString());
+
+  createTruthRating(truthRatingId, {
+    campaign: campaign.id,
+    group: group.id,
+    idea: event.params.ideaId,
+    rater: event.params.owner.toString(),
+    ratingScore: event.params.ratingScore,
+    comments: event.params.comments,
+    createdAt: event.block.timestamp
+  });
+}
+
+export function handleTruthRatingUpdated(event: TruthRatingUpdatedEvent): void {
+  
+  const truthRatingId = getTruthRatingId(event.params.campaignId.toU32(), event.params.groupId.toU32(), event.params.ideaId, event.params.owner.toString());
+
+  updateTruthRating(truthRatingId, {
+    ratingScore: event.params.ratingScore,
+    comments: event.params.comments
+  });
+}
+
+export function handleTruthRatingDeleted(event: TruthRatingDeletedEvent): void {
+  
+  const truthRatingId = getTruthRatingId(event.params.campaignId.toU32(), event.params.groupId.toU32(), event.params.ideaId, event.params.owner.toString());
+
+  store.remove("TruthRating", truthRatingId);
+}
+
 /**
  * helper functions below...
  */
@@ -681,6 +732,11 @@ export function getSpecialistGroupMembershipId(groupId: u32, memberId: string): 
 
 export function getSpecialistGroupCampaignConnectionId(groupId: u32, campaignId: u32): string {
   return getSpecialistGroupMembershipId(groupId, campaignId.toString());
+}
+
+export function getTruthRatingId(campaignId: u32, groupId: u32, ideaId: string, owner: string): string {
+  const stringParameter: string = owner.concat(ideaId.replace("0x","")).concat(groupId.toString());
+  return getSpecialistGroupMembershipId(groupId, stringParameter);
 }
 
 export function getCampaignId(campaignId: u32): string {
