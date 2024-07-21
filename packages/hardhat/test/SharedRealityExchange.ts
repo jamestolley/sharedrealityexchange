@@ -323,6 +323,92 @@ describe("SharedRealityExchange", function () {
 
         expect(await sharedRealityExchange.campaignSpecialistGroups(0, 0)).to.equal(true);
 
+        //////////////////////////////////////////////////////////////////////////////////////////////
+
+        // ratings tests
+
+        // add rating
+
+        // uint32 campaignId,
+        // uint32 groupId,
+        // uint32 ideaId,
+        // address owner,
+        // TruthRatingScore ratingScore,
+        // string comments
+
+        const campaignId: bigint = 0n;
+        const groupId: bigint = 0n;
+        const ideaId: string = "0x0123456789abcdef";
+        const ratingScore: bigint = 4n;
+        const comment: string = "comment";
+        await expect(await sharedRealityExchange.createTruthRating(campaignId, groupId, ideaId, ratingScore, comment))
+          .to.emit(sharedRealityExchange, "TruthRatingCreated")
+          .withArgs(campaignId, groupId, ideaId, deployer.address, ratingScore, comment);
+
+        const rating = await sharedRealityExchange.campaignGroupSenderIdeaRatings(0, 0, deployer.address, ideaId);
+
+        expect(rating[0]).to.equal(campaignId);
+        expect(rating[1]).to.equal(groupId);
+        expect(rating[2]).to.equal(deployer.address);
+        expect(rating[3]).to.equal(ideaId);
+        expect(rating[4]).to.equal(ratingScore);
+        expect(rating[5]).to.equal(comment);
+
+        // update rating
+        const updatedRatingScore = 8;
+        const updatedComment = "updated comment";
+        await expect(
+          await sharedRealityExchange.updateTruthRating(
+            campaignId,
+            groupId,
+            ideaId,
+            updatedRatingScore,
+            updatedComment,
+          ),
+        )
+          .to.emit(sharedRealityExchange, "TruthRatingUpdated")
+          .withArgs(campaignId, groupId, ideaId, deployer.address, updatedRatingScore, updatedComment);
+
+        const updatedRating = await sharedRealityExchange.campaignGroupSenderIdeaRatings(
+          0,
+          0,
+          deployer.address,
+          ideaId,
+        );
+
+        expect(updatedRating[0]).to.equal(campaignId);
+        expect(updatedRating[1]).to.equal(groupId);
+        expect(updatedRating[2]).to.equal(deployer.address);
+        expect(updatedRating[3]).to.equal(ideaId);
+        expect(updatedRating[4]).to.equal(updatedRatingScore);
+        expect(updatedRating[5]).to.equal(updatedComment);
+
+        // delete rating
+        await expect(await sharedRealityExchange.deleteTruthRating(campaignId, groupId, ideaId))
+          .to.emit(sharedRealityExchange, "TruthRatingDeleted")
+          .withArgs(campaignId, groupId, ideaId, deployer.address);
+
+        // expect(await sharedRealityExchange.campaignGroupSenderIdeaRatings(0, 0, deployer.address, ideaId)).to.equal(false);
+
+        const deletedRating = await sharedRealityExchange.campaignGroupSenderIdeaRatings(
+          0,
+          0,
+          deployer.address,
+          ideaId,
+        );
+
+        // the values of a deleted TruthRating - the default values for each field
+        expect(deletedRating[0]).to.equal(0n);
+        expect(deletedRating[1]).to.equal(0n);
+        expect(deletedRating[2]).to.equal("0x0000000000000000000000000000000000000000");
+        expect(deletedRating[3]).to.equal("");
+        expect(deletedRating[4]).to.equal(0);
+        expect(deletedRating[5]).to.equal("");
+
+        // TODO: rating aggregates
+
+        //////////////////////////////////////////////////////////////////////////////////////////////
+
         await expect(await sharedRealityExchange.removeSpecialistGroupFromCampaign(0, 0, comments))
           .to.emit(sharedRealityExchange, "SpecialistGroupRemovedFromCampaign")
           .withArgs(0, 0, deployer, comments);

@@ -53,11 +53,36 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		string specification;
 	}
 
+	enum TruthRatingScore { // stored value vs interpreted value; divide by 2
+		Zero, 			// 0  => 0
+		OneHalf, 		// 1  => 0.5
+		One, 			// 2  => 1
+		OneAndAHalf, 	// 3  => 1.5
+		Two, 			// 4  => 2
+		TwoAndAHalf, 	// 5  => 2.5
+		Three, 			// 6  => 3
+		ThreeAndAHalf, 	// 7  => 3.5
+		Four, 			// 8  => 4
+		FourAndAHalf, 	// 9  => 4.5
+		Five 			// 10 => 5
+	}
+
+	struct TruthRating {
+		uint32 groupId;
+		uint32 campaignId;
+		address owner;
+		string ideaId;
+		TruthRatingScore ratingScore;
+		string comment;
+	}
+
 	Campaign[] public campaigns;
 	SpecialistGroup[] public specialistGroups;
+	// TruthRating[] public truthRatings;
 	mapping(address => DonorHistory) public donations;
 	mapping(uint32 => mapping(address => bool)) public specialistGroupMembers;
 	mapping(uint32 => mapping(uint32 => bool)) public campaignSpecialistGroups;
+	mapping(uint32 => mapping(uint32 => mapping(address => mapping(string => TruthRating)))) public campaignGroupSenderIdeaRatings;
 
 	// just to make unique ideaIds in my tests
 	uint32 ideaNonce;
@@ -238,6 +263,31 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		uint32 campaignId,
 		address owner,
 		string comments
+	);
+
+	event TruthRatingCreated(
+		uint32 campaignId,
+		uint32 groupId,
+		string ideaId,
+		address owner,
+		TruthRatingScore ratingScore,
+		string comments
+	);
+
+	event TruthRatingUpdated(
+		uint32 campaignId,
+		uint32 groupId,
+		string ideaId,
+		address owner,
+		TruthRatingScore ratingScore,
+		string comments
+	);
+
+	event TruthRatingDeleted(
+		uint32 campaignId,
+		uint32 groupId,
+		string ideaId,
+		address owner
 	);
 
 	constructor() Ownable() {}
@@ -655,7 +705,7 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		emit SpecialistGroupAddedToCampaign(_groupId, _campaignId, msg.sender, _comments);
 	}
 
-    function removeSpecialistGroupFromCampaign(uint32 _campaignId, uint32 _groupId, string calldata _comments) public {
+    function removeSpecialistGroupFromCampaign(uint32 _groupId, uint32 _campaignId, string calldata _comments) public {
 
 		require(specialistGroups.length > _groupId, "Group not found");
 		
@@ -672,6 +722,81 @@ contract SharedRealityExchange is Ownable, ReentrancyGuard {
 		delete campaignSpecialistGroups[_campaignId][_groupId];
 
 		emit SpecialistGroupRemovedFromCampaign(_groupId, _campaignId, msg.sender, _comments);
+	}
+
+	function createTruthRating(uint32 _campaignId, uint32 _groupId, string calldata _ideaId, TruthRatingScore _ratingScore, string calldata _comment) public {
+
+		require(specialistGroups.length > _groupId, "Group not found");
+		
+		require(campaigns.length > _campaignId, "Campaign not found");
+
+		SpecialistGroup memory group = specialistGroups[_groupId];
+
+		require(group.status == SpecialistGroupStatus.Active, "Specialist group is not currently active");
+
+		require(campaignSpecialistGroups[_campaignId][_groupId], "Specialist group is not connected to the campaign");
+
+		require(specialistGroupMembers[_groupId][msg.sender], "The specialist is not a member of the group");
+
+		campaignGroupSenderIdeaRatings[_campaignId][_groupId][msg.sender][_ideaId] = TruthRating({
+			campaignId: _campaignId,
+			groupId: _groupId,
+			ideaId: _ideaId,
+			owner: msg.sender,
+			ratingScore: _ratingScore,
+			comment: _comment
+		});
+
+		emit TruthRatingCreated(_campaignId, _groupId, _ideaId, msg.sender, _ratingScore, _comment);
+
+	}
+
+    function updateTruthRating(uint32 _campaignId, uint32 _groupId, string calldata _ideaId, TruthRatingScore _ratingScore, string calldata _comment) public {
+		
+		require(campaigns.length > _campaignId, "Campaign not found");
+
+		require(specialistGroups.length > _groupId, "Group not found");
+
+		SpecialistGroup memory group = specialistGroups[_groupId];
+
+		require(group.status == SpecialistGroupStatus.Active, "Specialist group is not currently active");
+
+		require(campaignSpecialistGroups[_campaignId][_groupId], "Specialist group is not connected to the campaign");
+
+		require(specialistGroupMembers[_groupId][msg.sender], "The specialist is not a member of the group");
+
+		// campaignSpecialistGroups[_campaignId][_groupId] = true;
+		campaignGroupSenderIdeaRatings[_campaignId][_groupId][msg.sender][_ideaId] = TruthRating({
+			campaignId: _campaignId,
+			groupId: _groupId,
+			ideaId: _ideaId,
+			owner: msg.sender,
+			ratingScore: _ratingScore,
+			comment: _comment
+		});
+
+		emit TruthRatingUpdated(_campaignId, _groupId, _ideaId, msg.sender, _ratingScore, _comment);
+
+	}
+
+    function deleteTruthRating(uint32 _campaignId, uint32 _groupId, string calldata _ideaId) public {
+		
+		require(campaigns.length > _campaignId, "Campaign not found");
+
+		require(specialistGroups.length > _groupId, "Group not found");
+
+		SpecialistGroup memory group = specialistGroups[_groupId];
+
+		require(group.status == SpecialistGroupStatus.Active, "Specialist group is not currently active");
+
+		require(campaignSpecialistGroups[_campaignId][_groupId], "Specialist group is not connected to the campaign");
+
+		require(specialistGroupMembers[_groupId][msg.sender], "The specialist is not a member of the group");
+
+		delete campaignGroupSenderIdeaRatings[_campaignId][_groupId][msg.sender][_ideaId];
+
+		emit TruthRatingDeleted(_campaignId, _groupId, _ideaId, msg.sender);
+
 	}
 
 }
