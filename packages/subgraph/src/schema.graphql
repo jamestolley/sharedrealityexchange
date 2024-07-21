@@ -31,6 +31,7 @@ type Campaign @entity {
   follows: [Follow]! @derivedFrom(field: "campaign")
   updates: [CampaignUpdate]! @derivedFrom(field: "campaign")
   ideas: [Idea!]! @derivedFrom(field: "campaign")
+  specialistGroupConnections: [SpecialistGroupCampaignConnection!]! @derivedFrom(field: "campaign")
 }
 
 type Donation @entity(immutable: true) {
@@ -91,4 +92,34 @@ type Idea @entity {
     x: Int!
     y: Int!
     campaign: Campaign!
+}
+
+type SpecialistGroup @entity {
+    id: ID!
+    groupId: Int!
+    owner: Bytes! # address
+    status: Int!
+    name: String!
+    specification: String!
+    memberships: [SpecialistGroupMembership!]! @derivedFrom(field: "group")
+    createdAt: BigInt!
+}
+
+type SpecialistGroupMembership @entity {
+    id: ID!
+    owner: Bytes! # address
+    member: Bytes! # address
+    group: SpecialistGroup!
+    comments: String!
+    evidenceUrl: String!
+    createdAt: BigInt!
+}
+
+type SpecialistGroupCampaignConnection @entity {
+    id: ID!
+    owner: Bytes! # address
+    campaign: Campaign!
+    group: SpecialistGroup!
+    comments: String!
+    createdAt: BigInt!
 }

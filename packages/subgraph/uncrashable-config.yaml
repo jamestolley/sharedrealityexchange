@@ -84,6 +84,36 @@ entitySettings:
     entityId:
       - name: id
         type: Bytes
+  SpecialistGroup:
+    useDefault: []
+    setters:
+      - name: updateSpecialistGroupOwner
+        fields:
+          - owner
+      - name: updateSpecialistGroupName
+        fields:
+          - name
+      - name: updateSpecialistGroupSpecification
+        fields:
+          - specification
+      - name: updateSpecialistGroupStatus
+        fields:
+          - status
+    entityId:
+      - name: id
+        type: Bytes
+  SpecialistGroupMembership:
+    useDefault: []
+    setters: []
+    entityId:
+      - name: id
+        type: Bytes
+  SpecialistGroupCampaignConnection:
+    useDefault: []
+    setters: []
+    entityId:
+      - name: id
+        type: Bytes
 #   OwnershipTransferred:
 #     useDefault: []
 #     setters: []

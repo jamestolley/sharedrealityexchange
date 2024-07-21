@@ -1,6 +1,6 @@
 import { describe, test, assert, beforeAll, logStore, newMockEvent } from "matchstick-as";
-import { Address, BigInt, Bytes, ethereum, log } from "@graphprotocol/graph-ts";
-import { Campaign, Idea } from "../generated/schema";
+import { Address, BigInt, Bytes, ethereum, log, store } from "@graphprotocol/graph-ts";
+import { Campaign, Idea, SpecialistGroup, SpecialistGroupMembership } from "../generated/schema";
 // import { generateCampaignId, generateDonationId, generateWithdrawalId } from "../generated/UncrashableEntityHelpers";
 import { 
   CampaignCreated as CampaignCreatedEvent,
@@ -18,7 +18,17 @@ import {
   UpdateIdeaPosition as UpdateIdeaPositionEvent,
   UpdateIdeaText as UpdateIdeaTextEvent,
   UpdateIdeaType as UpdateIdeaTypeEvent,
-  DeleteIdea as DeleteIdeaEvent
+  DeleteIdea as DeleteIdeaEvent,
+  CreateSpecialistGroup as CreateSpecialistGroupEvent,
+  SpecialistGroupOwnerUpdated as SpecialistGroupOwnerUpdatedEvent,
+  SpecialistGroupNameUpdated as SpecialistGroupNameUpdatedEvent,
+  SpecialistGroupSpecificationUpdated as SpecialistGroupSpecificationUpdatedEvent,
+  SpecialistGroupStatusUpdated as SpecialistGroupStatusUpdatedEvent,
+  DeleteSpecialistGroup as DeleteSpecialistGroupEvent,
+  SpecialistAddedToGroup as SpecialistAddedToGroupEvent,
+  SpecialistRemovedFromGroup as SpecialistRemovedFromGroupEvent,
+  SpecialistGroupAddedToCampaign as SpecialistGroupAddedToCampaignEvent,
+  SpecialistGroupRemovedFromCampaign as SpecialistGroupRemovedFromCampaignEvent
 } from "../generated/SharedRealityExchange/SharedRealityExchange";
 import {
   handleCampaignCreated,
@@ -29,6 +39,7 @@ import {
   handleUpdateCampaignClaim,
   handleUpdateCampaignDescription,
   getCampaignId,
+  createCampaignId,
   handleFollow,
   handleUnfollow,
   handleCampaignUpdate,
@@ -37,8 +48,21 @@ import {
   handleUpdateIdeaType,
   handleUpdateIdeaParent,
   handleUpdateIdeaPosition,
-  handleDeleteIdea
+  handleDeleteIdea,
+  getSpecialistGroupId,
+  handleCreateSpecialistGroup,
+  handleSpecialistGroupOwnerUpdated,
+  handleSpecialistGroupNameUpdated,
+  handleSpecialistGroupSpecificationUpdated,
+  handleSpecialistGroupStatusUpdated,
+  handleDeleteSpecialistGroup,
+  handleSpecialistAddedToGroup,
+  handleSpecialistRemovedFromGroup,
+  handleSpecialistGroupAddedToCampaign,
+  handleSpecialistGroupRemovedFromCampaign,
+  getSpecialistGroupMembershipId
 } from "../src/mapping";
+import { getCampaign } from "../generated/UncrashableEntityHelpers";
 
 // interface IIdeaType {
 //   id: string;
@@ -72,6 +96,8 @@ import {
  * TODO: add tests for Donors and Withdrawers (including derived fields), and for the deterministic ids of Donations and Withdrawals
  */
 
+let originalMembershipId: string = '';
+
 describe("Shared Reality Exchange", () => {
 
   beforeAll(() => {
@@ -90,6 +116,9 @@ describe("Shared Reality Exchange", () => {
 
     let newCampaignUpdateEvent = createCampaignUpdateEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "title", "content")
     handleCampaignUpdate(newCampaignUpdateEvent)
+
+    let newCreateSpecialistGroupEvent = createCreateSpecialistGroupEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "name", "specification");
+    handleCreateSpecialistGroup(newCreateSpecialistGroupEvent);
 
     // let newTransferEvent = createTransferEvent("0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266")
     // handleOwnershipTransferred(newTransferEvent, '0x03')
@@ -681,7 +710,7 @@ describe("Shared Reality Exchange", () => {
 
     if (claim && childIdea && grandchildIdea) {
 
-      logStore();
+      // logStore();
     
       // updating the childIdea to be a child of the grandchild.
       // up to this point, both non-claims are children of the claim with the claim's children array like this: [childId, grandchildId]
@@ -691,7 +720,7 @@ describe("Shared Reality Exchange", () => {
       let updateIdeaParentEvent = createUpdateIdeaParentEvent(0, childIdea.id, grandchildIdea.id); // campaignId, ideaId, newParent (id)
       handleUpdateIdeaParent(updateIdeaParentEvent);
 
-      logStore();
+      // logStore();
 
       const reloadedClaim = Idea.load(claim.id);
       const reloadedChild = Idea.load(childIdea.id);
@@ -922,6 +951,269 @@ describe("Shared Reality Exchange", () => {
     assert.entityCount("Follow", 0);
   });
 
+  test("createSpecialistGroup", () => {
+
+    // logStore();
+
+    //
+    // test that the group was stored properly
+    //
+    let groupId = getSpecialistGroupId(0);
+
+    const group = SpecialistGroup.load(groupId);
+    assert.assertNotNull(
+      group,
+        "Loaded SpecialistGroup should not be null"
+    );
+
+    if (group) {
+
+      let memberships = group.memberships.load();
+
+      assert.equals(ethereum.Value.fromI32(1), ethereum.Value.fromI32(memberships.length));
+
+      assert.fieldEquals("SpecialistGroup", group.id, "groupId", "0");
+      assert.fieldEquals("SpecialistGroup", group.id, "owner", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+      assert.fieldEquals("SpecialistGroup", group.id, "status", "0");
+      assert.fieldEquals("SpecialistGroup", group.id, "name", "name");
+      assert.equals(ethereum.Value.fromI32(memberships.length), ethereum.Value.fromI32(1));
+      const membership = memberships[0];
+      if (membership) {
+
+        originalMembershipId = membership.id;
+
+        assert.fieldEquals("SpecialistGroupMembership", membership.id, "group", getSpecialistGroupId(0));
+        assert.fieldEquals("SpecialistGroupMembership", membership.id, "owner", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+        assert.fieldEquals("SpecialistGroupMembership", membership.id, "member", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+        assert.fieldEquals("SpecialistGroupMembership", membership.id, "comments", "Owners are automatically added to their specialist groups");
+        assert.fieldEquals("SpecialistGroupMembership", membership.id, "evidenceUrl", "");
+      }
+      else {
+        assert.equals(ethereum.Value.fromBoolean(false), ethereum.Value.fromBoolean(true));
+      }
+      assert.fieldEquals("SpecialistGroup", group.id, "specification", "specification");
+
+      assert.entityCount("SpecialistGroup", 1);
+
+    }
+    else {
+      assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+    }
+
+  });
+
+  test("Add / remove a specialist to / from a SpecialistGroup", () => {
+
+    const addEvent = createSpecialistAddedToGroupEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "0x0f082b417cE08105b6F43D1628c07256542Ac7FF", "comments", "evidenceUrl");
+    handleSpecialistAddedToGroup(addEvent);
+
+    let groupId = getSpecialistGroupId(0);
+
+    const group = SpecialistGroup.load(groupId);
+    assert.assertNotNull(
+      group,
+        "Loaded SpecialistGroup should not be null"
+    );
+
+    if (group) {
+      const memberships = group.memberships.load();
+      
+      assert.equals(ethereum.Value.fromI32(2), ethereum.Value.fromI32(memberships.length));
+
+      const membership1 = memberships[0];
+      const membership2 = memberships[1];
+
+      if (membership1 && membership2) {
+
+        if (membership1.id == originalMembershipId) {
+          assert.fieldEquals("SpecialistGroupMembership", membership1.id, "group", groupId);
+          assert.fieldEquals("SpecialistGroupMembership", membership1.id, "owner", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+          assert.fieldEquals("SpecialistGroupMembership", membership1.id, "member", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+          assert.fieldEquals("SpecialistGroupMembership", membership1.id, "comments", "Owners are automatically added to their specialist groups");
+          assert.fieldEquals("SpecialistGroupMembership", membership1.id, "evidenceUrl", "");
+          
+          assert.fieldEquals("SpecialistGroupMembership", membership2.id, "group", groupId);
+          assert.fieldEquals("SpecialistGroupMembership", membership2.id, "owner", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+          assert.fieldEquals("SpecialistGroupMembership", membership2.id, "member", "0x0f082b417ce08105b6f43d1628c07256542ac7ff");
+          assert.fieldEquals("SpecialistGroupMembership", membership2.id, "comments", "comments");
+          assert.fieldEquals("SpecialistGroupMembership", membership2.id, "evidenceUrl", "evidenceUrl");
+        }
+        else {
+          assert.fieldEquals("SpecialistGroupMembership", membership2.id, "group", groupId);
+          assert.fieldEquals("SpecialistGroupMembership", membership2.id, "owner", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+          assert.fieldEquals("SpecialistGroupMembership", membership2.id, "member", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+          assert.fieldEquals("SpecialistGroupMembership", membership2.id, "comments", "Owners are automatically added to their specialist groups");
+          assert.fieldEquals("SpecialistGroupMembership", membership2.id, "evidenceUrl", "");
+          
+          assert.fieldEquals("SpecialistGroupMembership", membership1.id, "group", groupId);
+          assert.fieldEquals("SpecialistGroupMembership", membership1.id, "owner", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+          assert.fieldEquals("SpecialistGroupMembership", membership1.id, "member", "0x0f082b417ce08105b6f43d1628c07256542ac7ff");
+          assert.fieldEquals("SpecialistGroupMembership", membership1.id, "comments", "comments");
+          assert.fieldEquals("SpecialistGroupMembership", membership1.id, "evidenceUrl", "evidenceUrl");
+        }
+      }
+      else {
+        assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+      }
+    }
+    else {
+      assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+    }
+
+    const removeEvent = createSpecialistRemovedFromGroupEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "0x0f082b417ce08105b6f43d1628c07256542ac7ff", "", "");
+    handleSpecialistRemovedFromGroup(removeEvent);
+
+    // logStore();
+
+    //
+    // test that the group was stored properly
+    //
+    let groupId2 = getSpecialistGroupId(0);
+
+    const group2 = SpecialistGroup.load(groupId2);
+    assert.assertNotNull(
+      group2,
+        "Loaded SpecialistGroup should not be null"
+    );
+
+    if (group2) {
+      const memberships2 = group2.memberships.load();
+      
+      assert.equals(ethereum.Value.fromI32(1), ethereum.Value.fromI32(memberships2.length));
+
+      const membership = memberships2[0];
+
+      if (membership) {
+        assert.fieldEquals("SpecialistGroupMembership", membership.id, "group", groupId);
+        assert.fieldEquals("SpecialistGroupMembership", membership.id, "owner", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+        assert.fieldEquals("SpecialistGroupMembership", membership.id, "member", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+        assert.fieldEquals("SpecialistGroupMembership", membership.id, "comments", "Owners are automatically added to their specialist groups");
+        assert.fieldEquals("SpecialistGroupMembership", membership.id, "evidenceUrl", "");
+      }
+      else {
+        assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+      }
+  
+    }
+    else {
+      assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+    }
+
+  });
+
+  test("Add / remove a SpecialistGroup to / from a Campaign", () => {
+
+    const campaign = getCampaign(getCampaignId(0));
+
+    if (campaign) {
+
+      assert.assertNotNull(
+        campaign,
+          "Loaded Campaign should not be null"
+      );
+
+      const specialistGroupConnections = campaign.specialistGroupConnections.load();
+      assert.equals(ethereum.Value.fromI32(0), ethereum.Value.fromI32(specialistGroupConnections.length));
+
+      // add a SpecialistGroup to the campaign
+      const addEvent = createSpecialistGroupAddedToCampaignEvent(0, 0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "comments");
+      handleSpecialistGroupAddedToCampaign(addEvent);
+
+      // check the total again and check the fields
+      const campaign2 = getCampaign(getCampaignId(0));
+      assert.assertNotNull(
+        campaign2,
+          "Loaded Campaign should not be null"
+      );
+
+      if (campaign2) {
+        const specialistGroupConnections2 = campaign2.specialistGroupConnections.load();
+        assert.equals(ethereum.Value.fromI32(1), ethereum.Value.fromI32(specialistGroupConnections2.length));
+        
+        const connection = specialistGroupConnections2[0];
+
+        if (connection) {
+
+          assert.fieldEquals("SpecialistGroupCampaignConnection", connection.id, "owner", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+          assert.fieldEquals("SpecialistGroupCampaignConnection", connection.id, "campaign", getCampaignId(0));
+          assert.fieldEquals("SpecialistGroupCampaignConnection", connection.id, "group", getSpecialistGroupId(0));
+          assert.fieldEquals("SpecialistGroupCampaignConnection", connection.id, "comments", "comments");
+  
+          // remove the group from the campaign
+          const removeEvent = createSpecialistGroupRemovedFromCampaignEvent(0, 0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "comments");
+          handleSpecialistGroupRemovedFromCampaign(removeEvent);
+    
+          // check the total again
+          assert.equals(ethereum.Value.fromI32(0), ethereum.Value.fromI32(specialistGroupConnections.length));
+        }
+        else {
+          assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+        }
+  
+      }
+      else {
+        assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+      }
+
+    }
+    else {
+      assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+    }
+
+  });
+
+  test("Update a SpecialistGroup", () => {
+    const updateNameEvent = createSpecialistGroupNameUpdatedEvent(0, "new name");
+    handleSpecialistGroupNameUpdated(updateNameEvent);
+
+    const updateSpecificationEvent = createSpecialistGroupSpecificationUpdatedEvent(0, "new specification");
+    handleSpecialistGroupSpecificationUpdated(updateSpecificationEvent);
+    
+    const updateStatusEvent = createSpecialistGroupStatusUpdatedEvent(0, 1);
+    handleSpecialistGroupStatusUpdated(updateStatusEvent);
+    
+    const updateOwnerEvent = createSpecialistGroupOwnerUpdatedEvent(0, "0x0f082b417ce08105b6f43d1628c07256542ac7ff");
+    handleSpecialistGroupOwnerUpdated(updateOwnerEvent);
+
+    // logStore();
+
+    //
+    // test that the group was stored properly
+    //
+    let groupId = getSpecialistGroupId(0);
+
+    const group = SpecialistGroup.load(groupId);
+    assert.assertNotNull(
+      group,
+        "Loaded SpecialistGroup should not be null"
+    );
+
+    if (group) {
+
+      assert.fieldEquals("SpecialistGroup", group.id, "groupId", "0");
+      assert.fieldEquals("SpecialistGroup", group.id, "status", "1");
+      assert.fieldEquals("SpecialistGroup", group.id, "owner", "0x0f082b417ce08105b6f43d1628c07256542ac7ff");
+      assert.fieldEquals("SpecialistGroup", group.id, "name", "new name");
+      assert.fieldEquals("SpecialistGroup", group.id, "specification", "new specification");
+
+    }
+    else {
+      assert.equals(ethereum.Value.fromBoolean(true), ethereum.Value.fromBoolean(false));
+    }
+
+  });
+
+  test("Delete a SpecialistGroup", () => {
+
+    assert.entityCount("SpecialistGroup", 1);
+
+    const deleteEvent = createDeleteSpecialistGroupEvent(0, "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "comments", "evidenceUrl");
+    handleDeleteSpecialistGroup(deleteEvent);
+
+    assert.entityCount("SpecialistGroup", 0);
+
+  });
+
   test("Can update a campaign", () => {
 
     let campaignId = getCampaignId(0);
@@ -953,6 +1245,30 @@ describe("Shared Reality Exchange", () => {
 
     assert.entityCount("Campaign", 1);
   });
+
+  // test("getCampaignId and createCampaignId return the same thing", () => {
+
+  //   let index = 0;
+
+  //   let campaignId1 = getCampaignId(BigInt.fromI32(index).toU32());
+  //   let campaignId2 = createCampaignId(BigInt.fromI32(index));
+    
+  //   assert.equals(ethereum.Value.fromString(campaignId1), ethereum.Value.fromString(campaignId2));
+    
+  //   index = 42;
+    
+  //   campaignId1 = getCampaignId(BigInt.fromI32(index).toU32());
+  //   campaignId2 = createCampaignId(BigInt.fromI32(index));
+    
+  //   assert.equals(ethereum.Value.fromString(campaignId1), ethereum.Value.fromString(campaignId2));
+
+  //   index = 231;
+    
+  //   campaignId1 = getCampaignId(BigInt.fromI32(index).toU32());
+  //   campaignId2 = createCampaignId(BigInt.fromI32(index));
+    
+  //   assert.equals(ethereum.Value.fromString(campaignId1), ethereum.Value.fromString(campaignId2));
+  // });
 });
 
 // @ts-ignore
@@ -1229,3 +1545,183 @@ export function createUpdateDescriptionEvent(campaignId: u32, newDescription: st
 
   return updateDescriptionEvent
 }
+
+export function createCreateSpecialistGroupEvent(groupId: u32, owner: string, name: string, specification: string): CreateSpecialistGroupEvent {
+  // @ts-ignore
+  let event = changetype<CreateSpecialistGroupEvent>(newMockEvent())
+  event.parameters = new Array()
+
+  // let theCampaignId = getCampaignId(campaignId)
+  let groupIdParam = new ethereum.EventParam("groupId", ethereum.Value.fromI32(groupId))
+  let ownerParam = new ethereum.EventParam("owner", ethereum.Value.fromAddress(Address.fromString(owner)))
+  let nameParam = new ethereum.EventParam("name", ethereum.Value.fromString(name))
+  let specificationParam = new ethereum.EventParam("specification", ethereum.Value.fromString(specification))
+
+  event.parameters.push(groupIdParam)
+  event.parameters.push(ownerParam)
+  event.parameters.push(nameParam)
+  event.parameters.push(specificationParam)
+
+  return event
+}
+
+export function createSpecialistGroupNameUpdatedEvent(groupId: u32, name: string): SpecialistGroupNameUpdatedEvent {
+  // @ts-ignore
+  let event = changetype<SpecialistGroupNameUpdatedEvent>(newMockEvent())
+  event.parameters = new Array()
+
+  // let theCampaignId = getCampaignId(campaignId)
+  let groupIdParam = new ethereum.EventParam("groupId", ethereum.Value.fromI32(groupId))
+  let nameParam = new ethereum.EventParam("name", ethereum.Value.fromString(name))
+
+  event.parameters.push(groupIdParam)
+  event.parameters.push(nameParam)
+
+  return event
+}
+
+export function createSpecialistGroupSpecificationUpdatedEvent(groupId: u32, specification: string): SpecialistGroupSpecificationUpdatedEvent {
+  // @ts-ignore
+  let event = changetype<SpecialistGroupSpecificationUpdatedEvent>(newMockEvent())
+  event.parameters = new Array()
+
+  // let theCampaignId = getCampaignId(campaignId)
+  let groupIdParam = new ethereum.EventParam("groupId", ethereum.Value.fromI32(groupId))
+  let specificationParam = new ethereum.EventParam("specification", ethereum.Value.fromString(specification))
+
+  event.parameters.push(groupIdParam)
+  event.parameters.push(specificationParam)
+
+  return event
+}
+
+export function createSpecialistGroupStatusUpdatedEvent(groupId: u32, status: u32): SpecialistGroupStatusUpdatedEvent {
+  // @ts-ignore
+  let event = changetype<SpecialistGroupStatusUpdatedEvent>(newMockEvent())
+  event.parameters = new Array()
+
+  // let theCampaignId = getCampaignId(campaignId)
+  let groupIdParam = new ethereum.EventParam("groupId", ethereum.Value.fromI32(groupId))
+  let specificationParam = new ethereum.EventParam("specification", ethereum.Value.fromI32(status))
+
+  event.parameters.push(groupIdParam)
+  event.parameters.push(specificationParam)
+
+  return event
+}
+
+export function createSpecialistAddedToGroupEvent(groupId: u32, owner: string, memberId: string, comments: string, evidenceUrl: string): SpecialistAddedToGroupEvent {
+  // @ts-ignore
+  let event = changetype<SpecialistAddedToGroupEvent>(newMockEvent())
+  event.parameters = new Array()
+
+  // let theCampaignId = getCampaignId(campaignId)
+  let groupIdParam = new ethereum.EventParam("groupId", ethereum.Value.fromI32(groupId))
+  let ownerParam = new ethereum.EventParam("owner", ethereum.Value.fromAddress(Address.fromString(owner)))
+  let memberIdParam = new ethereum.EventParam("memberId", ethereum.Value.fromAddress(Address.fromString(memberId)))
+  let commentsParam = new ethereum.EventParam("comments", ethereum.Value.fromString(comments))
+  let evidenceUrlParam = new ethereum.EventParam("evidenceUrl", ethereum.Value.fromString(evidenceUrl))
+
+  event.parameters.push(groupIdParam)
+  event.parameters.push(ownerParam)
+  event.parameters.push(memberIdParam)
+  event.parameters.push(commentsParam)
+  event.parameters.push(evidenceUrlParam)
+
+  return event
+}
+
+export function createSpecialistRemovedFromGroupEvent(groupId: u32, owner: string, memberId: string, comments: string, evidenceUrl: string): SpecialistRemovedFromGroupEvent {
+  // @ts-ignore
+  let event = changetype<SpecialistRemovedFromGroupEvent>(newMockEvent())
+  event.parameters = new Array()
+
+  // let theCampaignId = getCampaignId(campaignId)
+  let groupIdParam = new ethereum.EventParam("groupId", ethereum.Value.fromI32(groupId))
+  let ownerParam = new ethereum.EventParam("owner", ethereum.Value.fromAddress(Address.fromString(owner)))
+  let memberIdParam = new ethereum.EventParam("memberId", ethereum.Value.fromAddress(Address.fromString(memberId)))
+  let commentsParam = new ethereum.EventParam("comments", ethereum.Value.fromString(comments))
+  let evidenceUrlParam = new ethereum.EventParam("evidenceUrl", ethereum.Value.fromString(evidenceUrl))
+
+  event.parameters.push(groupIdParam)
+  event.parameters.push(ownerParam)
+  event.parameters.push(memberIdParam)
+  event.parameters.push(commentsParam)
+  event.parameters.push(evidenceUrlParam)
+
+  return event
+}
+
+export function createSpecialistGroupAddedToCampaignEvent(groupId: u32, campaignId: u32, owner: string, comments: string): SpecialistGroupAddedToCampaignEvent {
+  // @ts-ignore
+  let event = changetype<SpecialistGroupAddedToCampaignEvent>(newMockEvent())
+  event.parameters = new Array()
+
+  // let theCampaignId = getCampaignId(campaignId)
+  let groupIdParam = new ethereum.EventParam("groupId", ethereum.Value.fromI32(groupId))
+  let campaignIdParam = new ethereum.EventParam("groupId", ethereum.Value.fromI32(campaignId))
+  let ownerParam = new ethereum.EventParam("owner", ethereum.Value.fromAddress(Address.fromString(owner)))
+  let commentsParam = new ethereum.EventParam("comments", ethereum.Value.fromString(comments))
+
+  event.parameters.push(groupIdParam)
+  event.parameters.push(campaignIdParam)
+  event.parameters.push(ownerParam)
+  event.parameters.push(commentsParam)
+
+  return event
+}
+
+export function createSpecialistGroupRemovedFromCampaignEvent(groupId: u32, campaignId: u32, owner: string, comments: string): SpecialistGroupRemovedFromCampaignEvent {
+  // @ts-ignore
+  let event = changetype<SpecialistGroupRemovedFromCampaignEvent>(newMockEvent())
+  event.parameters = new Array()
+
+  // let theCampaignId = getCampaignId(campaignId)
+  let groupIdParam = new ethereum.EventParam("groupId", ethereum.Value.fromI32(groupId))
+  let campaignIdParam = new ethereum.EventParam("groupId", ethereum.Value.fromI32(campaignId))
+  let ownerParam = new ethereum.EventParam("owner", ethereum.Value.fromAddress(Address.fromString(owner)))
+  let commentsParam = new ethereum.EventParam("comments", ethereum.Value.fromString(comments))
+
+  event.parameters.push(groupIdParam)
+  event.parameters.push(campaignIdParam)
+  event.parameters.push(ownerParam)
+  event.parameters.push(commentsParam)
+
+  return event
+}
+
+export function createDeleteSpecialistGroupEvent(groupId: u32, sender: string, comments: string, evidenceUrl: string): DeleteSpecialistGroupEvent {
+  // @ts-ignore
+  let event = changetype<DeleteSpecialistGroupEvent>(newMockEvent())
+  event.parameters = new Array()
+
+  // let theCampaignId = getCampaignId(campaignId)
+  let groupIdParam = new ethereum.EventParam("groupId", ethereum.Value.fromI32(groupId))
+  let senderParam = new ethereum.EventParam("sender", ethereum.Value.fromAddress(Address.fromString(sender)))
+  let commentsParam = new ethereum.EventParam("comments", ethereum.Value.fromString(comments))
+  let evidenceUrlParam = new ethereum.EventParam("evidenceUrl", ethereum.Value.fromString(evidenceUrl))
+
+  event.parameters.push(groupIdParam)
+  event.parameters.push(senderParam)
+  event.parameters.push(commentsParam)
+  event.parameters.push(evidenceUrlParam)
+
+  return event
+}
+
+export function createSpecialistGroupOwnerUpdatedEvent(groupId: u32, owner: string): SpecialistGroupOwnerUpdatedEvent {
+  // @ts-ignore
+  let event = changetype<SpecialistGroupOwnerUpdatedEvent>(newMockEvent())
+  event.parameters = new Array()
+
+  // let theCampaignId = getCampaignId(campaignId)
+  let groupIdParam = new ethereum.EventParam("groupId", ethereum.Value.fromI32(groupId))
+  let sownerParam = new ethereum.EventParam("owner", ethereum.Value.fromAddress(Address.fromString(owner)))
+
+  event.parameters.push(groupIdParam)
+  event.parameters.push(sownerParam)
+
+  return event
+}
+
+

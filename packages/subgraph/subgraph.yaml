@@ -9,7 +9,7 @@ dataSources:
     network: localhost
     source:
       abi: YourContract
-      address: "0x68B1D87F95878fE05B998F19b66F4baba5De1aed"
+      address: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -29,7 +29,7 @@ dataSources:
     network: localhost
     source:
       abi: SharedRealityExchange
-      address: "0x3Aa5ebB10DC797CAC828524e59A333d0A371443c"
+      address: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -44,6 +44,9 @@ dataSources:
         - Unfollow
         - CampaignUpdate
         - Idea
+        - SpecialistGroup
+        - SpecialistGroupMembership
+        - SpecialistGroupCampaignConnection
       abis:
         - name: SharedRealityExchange
           file: ./abis/localhost_SharedRealityExchange.json
@@ -80,4 +83,24 @@ dataSources:
           handler: handleUpdateIdeaType
         - event: DeleteIdea(uint32,string)
           handler: handleDeleteIdea
+        - event: CreateSpecialistGroup(uint32,address,string,string)
+          handler: handleCreateSpecialistGroup
+        - event: SpecialistGroupOwnerUpdated(uint32,address)
+          handler: handleSpecialistGroupOwnerUpdated
+        - event: SpecialistGroupNameUpdated(uint32,string)
+          handler: handleSpecialistGroupNameUpdated
+        - event: SpecialistGroupSpecificationUpdated(uint32,string)
+          handler: handleSpecialistGroupSpecificationUpdated
+        - event: SpecialistGroupStatusUpdated(uint32,uint8)
+          handler: handleSpecialistGroupStatusUpdated
+        - event: DeleteSpecialistGroup(uint32,address,string,string)
+          handler: handleDeleteSpecialistGroup
+        - event: SpecialistAddedToGroup(uint32,address,address,string,string)
+          handler: handleSpecialistAddedToGroup
+        - event: SpecialistRemovedFromGroup(uint32,address,address,string,string)
+          handler: handleSpecialistRemovedFromGroup
+        - event: SpecialistGroupAddedToCampaign(uint32,uint32,address,string)
+          handler: handleSpecialistGroupAddedToCampaign
+        - event: SpecialistGroupRemovedFromCampaign(uint32,uint32,address,string)
+          handler: handleSpecialistGroupRemovedFromCampaign
       file: ./src/mapping.ts

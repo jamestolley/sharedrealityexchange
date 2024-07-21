@@ -18,9 +18,19 @@ import {
   UpdateIdeaPosition as UpdateIdeaPositionEvent,
   UpdateIdeaText as UpdateIdeaTextEvent,
   UpdateIdeaType as UpdateIdeaTypeEvent,
-  DeleteIdea as DeleteIdeaEvent
+  DeleteIdea as DeleteIdeaEvent,
+  CreateSpecialistGroup as CreateSpecialistGroupEvent,
+  SpecialistGroupOwnerUpdated as SpecialistGroupOwnerUpdatedEvent,
+  SpecialistGroupNameUpdated as SpecialistGroupNameUpdatedEvent,
+  SpecialistGroupSpecificationUpdated as SpecialistGroupSpecificationUpdatedEvent,
+  SpecialistGroupStatusUpdated as SpecialistGroupStatusUpdatedEvent,
+  DeleteSpecialistGroup as DeleteSpecialistGroupEvent,
+  SpecialistAddedToGroup as SpecialistAddedToGroupEvent,
+  SpecialistRemovedFromGroup as SpecialistRemovedFromGroupEvent,
+  SpecialistGroupAddedToCampaign as SpecialistGroupAddedToCampaignEvent,
+  SpecialistGroupRemovedFromCampaign as SpecialistGroupRemovedFromCampaignEvent
 } from "../generated/SharedRealityExchange/SharedRealityExchange";
-import { Greeting, Sender, Idea } from "../generated/schema";
+import { Greeting, Sender, Idea, Campaign } from "../generated/schema";
 import {
   generateCampaignId,
   generateDonorId,
@@ -50,7 +60,20 @@ import {
   updateIdeaType,
   updateIdeaParent,
   updateIdeaParentIndex,
-  updateIdeaPosition
+  updateIdeaPosition,
+  generateSpecialistGroupId,
+  generateSpecialistGroupMembershipId,
+  generateSpecialistGroupCampaignConnectionId,
+  updateSpecialistGroupName,
+  updateSpecialistGroupOwner,
+  updateSpecialistGroupStatus,
+  updateSpecialistGroupSpecification,
+  createSpecialistGroup,
+  createSpecialistGroupMembership,
+  getSpecialistGroup,
+  getSpecialistGroupMembership,
+  createSpecialistGroupCampaignConnection,
+  getSpecialistGroupCampaignConnection
 } from "../generated/UncrashableEntityHelpers"
 
 export function handleGreetingChange(event: GreetingChange): void {
@@ -82,6 +105,8 @@ export function handleGreetingChange(event: GreetingChange): void {
   sender.save();
 }
 
+/** Campaigns */
+
 export function handleCampaignCreated(event: CampaignCreatedEvent): void {
 
   let campaignId = createCampaignId(event.params.campaignId);
@@ -98,6 +123,33 @@ export function handleCampaignCreated(event: CampaignCreatedEvent): void {
     createdAt: event.block.timestamp,
   });
 }
+
+export function handleUpdateCampaignOwner(event: CampaignOwnerUpdatedEvent): void {
+  updateCampaignOwner(createCampaignId(event.params.campaignId), {
+    owner: event.params.owner
+  });
+}
+
+export function handleUpdateCampaignTitle(event: CampaignTitleUpdatedEvent): void {
+  updateCampaignTitle(createCampaignId(event.params.campaignId), {
+    title: event.params.title
+  });
+}
+
+export function handleUpdateCampaignClaim(event: CampaignClaimUpdatedEvent): void {
+  updateCampaignClaim(createCampaignId(event.params.campaignId), {
+    claim: event.params.claim
+  });
+}
+
+export function handleUpdateCampaignDescription(event: CampaignDescriptionUpdatedEvent): void {
+  updateCampaignDescription(createCampaignId(event.params.campaignId), {
+    description: event.params.description
+  });
+}
+
+
+/** Donations / Withdrawals */
 
 export function handleDonation(event: DonationEvent): void {
 
@@ -174,6 +226,8 @@ export function handleWithdrawal(event: WithdrawalEvent): void {
   });
 }
 
+/** Follows / Unfollows */
+
 export function handleFollow(event: FollowEvent): void {
 
   // add withdraw amount from campaign.amountWithdrawn
@@ -206,6 +260,8 @@ export function handleUnfollow(event: UnfollowEvent): void {
   store.remove('Follow', followId);
 }
 
+/** CampaignUpdates */
+
 export function handleCampaignUpdate(event: CampaignUpdateEvent): void {
 
   // update the campaign's amountDonated
@@ -216,8 +272,7 @@ export function handleCampaignUpdate(event: CampaignUpdateEvent): void {
   let hex_string = ensureEvenCharacterHexString(event.transaction.hash.toHex().concat(event.logIndex.toString()))
   let updateId = generateCampaignUpdateId(Bytes.fromHexString(hex_string));
 
-  createCampaignUpdate(
-    updateId, {
+  createCampaignUpdate(updateId, {
     campaign: campaignId,
     author: Bytes.fromHexString(event.params.author.toHexString()),
     title: event.params.title,
@@ -225,6 +280,8 @@ export function handleCampaignUpdate(event: CampaignUpdateEvent): void {
     createdAt: event.block.timestamp,
   });
 }
+
+/** Ideas */
 
 export function handleCreateIdea(event: CreateIdeaEvent): void {
 
@@ -378,29 +435,168 @@ export function handleDeleteIdea(event: DeleteIdeaEvent): void {
 
 }
 
-export function handleUpdateCampaignOwner(event: CampaignOwnerUpdatedEvent): void {
-  updateCampaignOwner(createCampaignId(event.params.campaignId), {
-    owner: event.params.owner
+/** SpecialistGroups */
+
+export function handleCreateSpecialistGroup(event: CreateSpecialistGroupEvent): void {
+
+  const groupId = getSpecialistGroupId(event.params.groupId.toU32());
+
+  // const groupIndex = event.params.groupId;
+  // const hexString = event.transaction.hash.toHex().concat(groupIndex.toString());
+  // const evenHexString = ensureEvenCharacterHexString(hexString);
+  // const groupId = generateSpecialistGroupId(Bytes.fromHexString(evenHexString));
+
+  const storableOwner = Bytes.fromHexString(event.params.owner.toHexString());
+
+  createSpecialistGroup(groupId, {
+    owner: storableOwner,
+    groupId: event.params.groupId.toI32(),
+    status: 0,
+    name: event.params.name,
+    specification: event.params.specification,
+    createdAt: event.block.timestamp
+  });
+
+  // since the owner must be a member of the group, let's add them now
+
+  const groupIdAsU32 = event.params.groupId.toU32();
+  const groupId2 = getSpecialistGroupId(groupIdAsU32);
+
+  const memberIdAsString: string = event.params.owner.toString();
+  const groupMembershipId = getSpecialistGroupMembershipId(groupIdAsU32, memberIdAsString);
+
+  createSpecialistGroupMembership(groupMembershipId, {
+    group: groupId2,
+    owner: storableOwner,
+    member: storableOwner,
+    comments: "Owners are automatically added to their specialist groups",
+    evidenceUrl: "",
+    createdAt: event.block.timestamp
+  });
+
+
+
+}
+
+export function handleSpecialistGroupOwnerUpdated(event: SpecialistGroupOwnerUpdatedEvent): void {
+
+  const groupId = getSpecialistGroupId(event.params.groupId.toU32());
+
+  updateSpecialistGroupOwner(groupId, {
+    owner: Bytes.fromHexString(event.params.owner.toHexString())
   });
 }
 
-export function handleUpdateCampaignTitle(event: CampaignTitleUpdatedEvent): void {
-  updateCampaignTitle(createCampaignId(event.params.campaignId), {
-    title: event.params.title
+export function handleSpecialistGroupNameUpdated(event: SpecialistGroupNameUpdatedEvent): void {
+
+  const groupId = getSpecialistGroupId(event.params.groupId.toU32());
+
+  updateSpecialistGroupName(groupId, {
+    name: event.params.name
   });
 }
 
-export function handleUpdateCampaignClaim(event: CampaignClaimUpdatedEvent): void {
-  updateCampaignClaim(createCampaignId(event.params.campaignId), {
-    claim: event.params.claim
+export function handleSpecialistGroupSpecificationUpdated(event: SpecialistGroupSpecificationUpdatedEvent): void {
+
+  const groupId = getSpecialistGroupId(event.params.groupId.toU32());
+
+  updateSpecialistGroupSpecification(groupId, {
+    specification: event.params.specification
   });
 }
 
-export function handleUpdateCampaignDescription(event: CampaignDescriptionUpdatedEvent): void {
-  updateCampaignDescription(createCampaignId(event.params.campaignId), {
-    description: event.params.description
+export function handleSpecialistGroupStatusUpdated(event: SpecialistGroupStatusUpdatedEvent): void {
+
+  const groupId = getSpecialistGroupId(event.params.groupId.toU32());
+
+  updateSpecialistGroupStatus(groupId, {
+    status: event.params.status
   });
 }
+
+export function handleDeleteSpecialistGroup(event: DeleteSpecialistGroupEvent): void {
+
+  const groupId = getSpecialistGroupId(event.params.groupId.toU32());
+
+  const group = getSpecialistGroup(groupId);
+
+  if (group) {
+    // delete all of the memberships
+    const memberships = group.memberships.load();
+    for (let i = 0; i < memberships.length; i++) {
+      // const membership = getSpecialistGroupMembership(memberships[i]!.toString());
+      store.remove("SpecialistGroupMembership", memberships[i].id);
+    }
+  }
+
+  store.remove('SpecialistGroup', groupId);
+}
+
+export function handleSpecialistAddedToGroup(event: SpecialistAddedToGroupEvent): void {
+
+  const groupIdAsU32 = event.params.groupId.toU32();
+  const groupId = getSpecialistGroupId(groupIdAsU32);
+
+  const memberIdAsString: string = event.params.memberId.toString();
+  const groupMembershipId = getSpecialistGroupMembershipId(groupIdAsU32, memberIdAsString);
+
+  createSpecialistGroupMembership(groupMembershipId, {
+    group: groupId,
+    owner: Bytes.fromHexString(event.params.owner.toHexString()),
+    member: Bytes.fromHexString(event.params.memberId.toHexString()),
+    comments: event.params.comments,
+    evidenceUrl: event.params.evidenceUrl,
+    createdAt: event.block.timestamp
+  });
+  
+}
+
+export function handleSpecialistRemovedFromGroup(event: SpecialistRemovedFromGroupEvent): void {
+
+  const groupIdAsU32 = event.params.groupId.toU32();
+  const memberIdAsString: string = event.params.memberId.toString();
+  const groupMembershipId = getSpecialistGroupMembershipId(groupIdAsU32, memberIdAsString);
+
+  store.remove("SpecialistGroupMembership", groupMembershipId);
+
+}
+
+export function handleSpecialistGroupAddedToCampaign(event: SpecialistGroupAddedToCampaignEvent): void {
+
+  // load the campaign
+  const campaignId = getCampaignId(event.params.campaignId.toU32());
+  const campaign = getCampaign(campaignId);
+
+  // load the group
+  const groupId = getSpecialistGroupId(event.params.groupId.toU32());
+  const group = getSpecialistGroup(groupId);
+
+  // create the connectionId
+  const connectionId = getSpecialistGroupCampaignConnectionId(event.params.groupId.toU32(), event.params.campaignId.toU32());
+
+  // creates the connection entity
+  createSpecialistGroupCampaignConnection(connectionId, {
+    owner: Bytes.fromHexString(event.params.owner.toHexString()),
+    campaign: campaign.id,
+    group: group.id,
+    comments: event.params.comments,
+    createdAt: event.block.timestamp
+  });
+  
+
+}
+
+export function handleSpecialistGroupRemovedFromCampaign(event: SpecialistGroupRemovedFromCampaignEvent): void {
+
+  // create the connectionId
+  const connectionId = getSpecialistGroupCampaignConnectionId(event.params.groupId.toU32(), event.params.campaignId.toU32());
+
+  store.remove("SpecialistGroupCampaignConnection", connectionId)
+}
+
+/**
+ * helper functions below...
+ */
 
 /**
  * Some functions require that the hex strings have an even number of characters
@@ -460,6 +656,31 @@ export function incrementWithdrawalCount(entityId: string): void {
   entity.withdrawalCount = entity.withdrawalCount.plus(BigInt.fromI32(1));
 
   entity.save();
+}
+
+export function getSpecialistGroupId(groupId: u32): string {
+  return getCampaignId(groupId);
+}
+
+export function getSpecialistGroupMembershipId(groupId: u32, memberId: string): string {
+
+  // get the hex of the groupId
+  let groupHexString: string = BigInt.fromU32(groupId).toHexString();
+
+  // get the hex of the memberId
+  // let memberHexString: string = memberId.toHexString();
+
+  // combine them into a short, even hex string
+  let hexString = groupHexString.concat(memberId.replace("0x",""));
+  let evenHexString = ensureEvenCharacterHexString(hexString);
+
+  // finish the algorithm from there
+  return generateSpecialistGroupMembershipId(Bytes.fromHexString(evenHexString));
+
+}
+
+export function getSpecialistGroupCampaignConnectionId(groupId: u32, campaignId: u32): string {
+  return getSpecialistGroupMembershipId(groupId, campaignId.toString());
 }
 
 export function getCampaignId(campaignId: u32): string {
